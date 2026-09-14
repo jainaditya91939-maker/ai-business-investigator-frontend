@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 import Dashboard from "./pages/Dashboard";
 import Suppliers from "./pages/Suppliers";
@@ -43,6 +44,7 @@ function App() {
         </main>
 
       </div>
+      <SpeedInsights />
     </BrowserRouter>
   );
 }
