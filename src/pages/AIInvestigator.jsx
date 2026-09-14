@@ -1,6 +1,7 @@
 import { useState } from "react";
 
-const AI_API_URL = "http://localhost:8001";
+const AI_API_URL =
+  import.meta.env.VITE_AI_URL || "http://127.0.0.1:8001";
 
 function AIInvestigator() {
   const [question, setQuestion] = useState("");
