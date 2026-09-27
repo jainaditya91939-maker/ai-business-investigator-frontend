@@ -1,7 +1,8 @@
 import {
   BrowserRouter,
   Routes,
-  Route
+  Route,
+  Navigate,
 } from "react-router-dom";
 
 import Dashboard from "./pages/Dashboard";
@@ -20,13 +21,27 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 import { AuthProvider } from "./auth/AuthContext";
 
+function ProtectedLayout({ children }) {
+  return (
+    <ProtectedRoute>
+      <div className="app">
+        <Sidebar />
+        <main className="main-content">
+          {children}
+        </main>
+      </div>
+    </ProtectedRoute>
+  );
+}
+
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <Routes>
 
-          {/* Public */}
+          {/* Public Routes */}
+
           <Route
             path="/login"
             element={<Login />}
@@ -37,103 +52,85 @@ function App() {
             element={<Signup />}
           />
 
-          {/* Protected */}
+          {/* Protected Dashboard Routes */}
+
           <Route
             path="/"
             element={
-              <ProtectedRoute>
-                <div className="app">
-                  <Sidebar />
-                  <main className="main-content">
-                    <Dashboard />
-                  </main>
-                </div>
-              </ProtectedRoute>
+              <ProtectedLayout>
+                <Dashboard />
+              </ProtectedLayout>
+            }
+          />
+
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedLayout>
+                <Dashboard />
+              </ProtectedLayout>
             }
           />
 
           <Route
             path="/suppliers"
             element={
-              <ProtectedRoute>
-                <div className="app">
-                  <Sidebar />
-                  <main className="main-content">
-                    <Suppliers />
-                  </main>
-                </div>
-              </ProtectedRoute>
+              <ProtectedLayout>
+                <Suppliers />
+              </ProtectedLayout>
             }
           />
 
           <Route
             path="/products"
             element={
-              <ProtectedRoute>
-                <div className="app">
-                  <Sidebar />
-                  <main className="main-content">
-                    <Products />
-                  </main>
-                </div>
-              </ProtectedRoute>
+              <ProtectedLayout>
+                <Products />
+              </ProtectedLayout>
             }
           />
 
           <Route
             path="/transactions"
             element={
-              <ProtectedRoute>
-                <div className="app">
-                  <Sidebar />
-                  <main className="main-content">
-                    <Transactions />
-                  </main>
-                </div>
-              </ProtectedRoute>
+              <ProtectedLayout>
+                <Transactions />
+              </ProtectedLayout>
             }
           />
 
           <Route
             path="/add-transaction"
             element={
-              <ProtectedRoute>
-                <div className="app">
-                  <Sidebar />
-                  <main className="main-content">
-                    <AddTransaction />
-                  </main>
-                </div>
-              </ProtectedRoute>
+              <ProtectedLayout>
+                <AddTransaction />
+              </ProtectedLayout>
             }
           />
 
           <Route
             path="/ai"
             element={
-              <ProtectedRoute>
-                <div className="app">
-                  <Sidebar />
-                  <main className="main-content">
-                    <AIInvestigator />
-                  </main>
-                </div>
-              </ProtectedRoute>
+              <ProtectedLayout>
+                <AIInvestigator />
+              </ProtectedLayout>
             }
           />
 
           <Route
             path="/suppliers/:supplierName"
             element={
-              <ProtectedRoute>
-                <div className="app">
-                  <Sidebar />
-                  <main className="main-content">
-                    <SupplierDetails />
-                  </main>
-                </div>
-              </ProtectedRoute>
+              <ProtectedLayout>
+                <SupplierDetails />
+              </ProtectedLayout>
             }
+          />
+
+          {/* Unknown routes */}
+
+          <Route
+            path="*"
+            element={<Navigate to="/" replace />}
           />
 
         </Routes>
