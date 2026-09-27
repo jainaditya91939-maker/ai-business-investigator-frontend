@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { API_URL } from "../api";
+import { API_URL, authFetch } from "../api";
 
 function Dashboard() {
   const [dashboard, setDashboard] = useState(null);
@@ -12,7 +12,7 @@ function Dashboard() {
         setLoading(true);
         setError("");
 
-        const response = await fetch(
+        const response = await authFetch(
           `${API_URL}/api/v1/dashboard`
         );
 

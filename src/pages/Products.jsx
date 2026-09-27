@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { API_URL } from "../api";
+import { API_URL, authFetch } from "../api";
 
 function Products() {
   const [products, setProducts] = useState([]);
@@ -30,7 +30,7 @@ function Products() {
       setLoading(true);
       setError("");
 
-      const response = await fetch(
+      const response = await authFetch(
         `${API_URL}/api/v1/products`
       );
 
@@ -56,7 +56,7 @@ function Products() {
     try {
       setLoadingSuppliers(true);
 
-      const response = await fetch(
+      const response = await authFetch(
         `${API_URL}/api/v1/suppliers`
       );
 
@@ -170,7 +170,7 @@ function Products() {
 
       const method = isEditing ? "PUT" : "POST";
 
-      const response = await fetch(url, {
+      const response = await authFetch(url, {
         method: method,
 
         headers: {
@@ -244,7 +244,7 @@ function Products() {
     try {
       setDeletingProduct(product.id);
 
-      const response = await fetch(
+      const response = await authFetch(
         `${API_URL}/api/v1/products/${product.id}`,
         {
           method: "DELETE",

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { authFetch } from "../api";
 
 const AI_API_URL =
   import.meta.env.VITE_AI_URL || "http://127.0.0.1:8001";
@@ -20,7 +21,7 @@ function AIInvestigator() {
       setError("");
       setAnswer("");
 
-      const response = await fetch(
+      const response = await authFetch(
         `${AI_API_URL}/api/v1/ai/investigate`,
         {
           method: "POST",

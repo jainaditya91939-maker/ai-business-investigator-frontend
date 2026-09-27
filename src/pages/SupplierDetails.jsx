@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { API_URL } from "../api";
+import { API_URL, authFetch } from "../api";
 
 function SupplierDetails() {
   const { supplierName } = useParams();
@@ -21,7 +21,7 @@ function SupplierDetails() {
         setError("");
 
         // Fetch all suppliers
-        const suppliersResponse = await fetch(
+        const suppliersResponse = await authFetch(
           `${API_URL}/api/v1/suppliers`
         );
 
@@ -47,10 +47,10 @@ function SupplierDetails() {
         // Fetch balance and ledger
         const [balanceResponse, ledgerResponse] =
           await Promise.all([
-            fetch(
+            authFetch(
               `${API_URL}/api/v1/suppliers/${supplierId}/balance`
             ),
-            fetch(
+            authFetch(
               `${API_URL}/api/v1/suppliers/${supplierId}/ledger`
             ),
           ]);

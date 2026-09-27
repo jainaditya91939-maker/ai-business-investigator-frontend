@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { API_URL, AI_API_URL } from "../api";
+import { API_URL, AI_API_URL, authFetch } from "../api";
 
 
 function AddTransaction() {
@@ -49,7 +49,7 @@ function AddTransaction() {
 
       try {
 
-        const response = await fetch(
+        const response = await authFetch(
           `${API_URL}/api/v1/suppliers`
         );
 
@@ -121,7 +121,7 @@ function AddTransaction() {
       setSaving(true);
 
 
-      const response = await fetch(
+      const response = await authFetch(
         `${API_URL}/api/v1/transactions`,
         {
           method: "POST",
@@ -269,7 +269,7 @@ function AddTransaction() {
       // Send speech text to AI service
       try {
 
-        const response = await fetch(
+        const response = await authFetch(
           `${AI_API_URL}/api/v1/ai/voice/transaction`,
           {
             method: "POST",
@@ -431,7 +431,7 @@ function AddTransaction() {
       );
 
 
-      const response = await fetch(
+      const response = await authFetch(
         `${AI_API_URL}/api/v1/ai/invoice/transaction`,
         {
           method: "POST",

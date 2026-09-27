@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { API_URL } from "../api";
+import { API_URL, authFetch } from "../api";
 
 function Suppliers() {
   const [suppliers, setSuppliers] = useState([]);
@@ -21,7 +21,7 @@ function Suppliers() {
       setLoading(true);
       setError("");
 
-      const response = await fetch(
+      const response = await authFetch(
         `${API_URL}/api/v1/suppliers/summary`
       );
 
@@ -59,7 +59,7 @@ function Suppliers() {
     try {
       setSaving(true);
 
-      const response = await fetch(
+      const response = await authFetch(
         `${API_URL}/api/v1/suppliers`,
         {
           method: "POST",

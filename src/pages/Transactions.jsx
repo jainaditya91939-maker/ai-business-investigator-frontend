@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { API_URL } from "../api";
+import { API_URL, authFetch } from "../api";
 
 function Transactions() {
   const [transactions, setTransactions] = useState([]);
@@ -14,7 +14,7 @@ function Transactions() {
         setError("");
 
         // Get all suppliers
-        const suppliersResponse = await fetch(
+        const suppliersResponse = await authFetch(
           `${API_URL}/api/v1/suppliers`
         );
 
@@ -28,7 +28,7 @@ function Transactions() {
         // Get ledger for every supplier
         const ledgerResults = await Promise.all(
           suppliersData.map(async (supplier) => {
-            const response = await fetch(
+            const response = await authFetch(
               `${API_URL}/api/v1/suppliers/${supplier.id}/ledger`
             );
 
