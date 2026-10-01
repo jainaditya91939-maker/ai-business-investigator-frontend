@@ -1,125 +1,217 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { API_URL, authFetch } from "../api";
+import { API_URL, apiFetch } from "../api";
 
 function Transactions() {
   const [transactions, setTransactions] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [editingTransaction, setEditingTransaction] = useState(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError("");
-
-        // Get all suppliers
-        const suppliersResponse = await authFetch(
-          `${API_URL}/api/v1/suppliers`
-        );
-
-        if (!suppliersResponse.ok) {
-          throw new Error("Failed to fetch suppliers");
-        }
-
-        const suppliersData =
-          await suppliersResponse.json();
-
-        // Get ledger for every supplier
-        const ledgerResults = await Promise.all(
-          suppliersData.map(async (supplier) => {
-            const response = await authFetch(
-              `${API_URL}/api/v1/suppliers/${supplier.id}/ledger`
-            );
-
-            if (!response.ok) {
-              throw new Error(
-                `Failed to fetch ledger for ${supplier.name}`
-              );
-            }
-
-            const ledgerData =
-              await response.json();
-
-            return {
-              supplier,
-              rows: ledgerData.ledger || [],
-            };
-          })
-        );
-
-        // Combine all supplier transactions
-        const allTransactions = [];
-
-        ledgerResults.forEach(
-          ({ supplier, rows }) => {
-            rows.forEach((transaction) => {
-              allTransactions.push({
-                ...transaction,
-                supplier_id: supplier.id,
-                supplier_name: supplier.name,
-
-                // Ledger stores amount as debit or credit
-                amount:
-                  Number(transaction.debit) > 0
-                    ? Number(transaction.debit)
-                    : Number(transaction.credit),
-              });
-            });
-          }
-        );
-
-        // Newest transactions first
-        allTransactions.sort((a, b) => {
-          return b.id - a.id;
-        });
-
-        setTransactions(allTransactions);
-      } catch (error) {
-        console.error(error);
-        setError(
-          "Unable to load transactions."
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, []);
 
-  const formatMoney = (amount) => {
-    return `₹${Number(amount || 0).toLocaleString(
-      "en-IN",
-      {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const [transactionsResponse, suppliersResponse] =
+        await Promise.all([
+          apiFetch(`${API_URL}/api/v1/transactions`),
+          apiFetch(`${API_URL}/api/v1/suppliers`),
+        ]);
+
+      if (!transactionsResponse.ok) {
+        throw new Error("Failed to fetch transactions");
       }
-    )}`;
+
+      if (!suppliersResponse.ok) {
+        throw new Error("Failed to fetch suppliers");
+      }
+
+      const transactionsData =
+        await transactionsResponse.json();
+      const suppliersData =
+        await suppliersResponse.json();
+
+      setTransactions(transactionsData);
+      setSuppliers(suppliersData);
+    } catch (error) {
+      console.error(error);
+      setError("Unable to load transactions.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatMoney = (amount) => {
+    return `₹${Number(amount || 0).toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
   };
 
   const getTransactionClass = (type) => {
     switch (type) {
       case "PURCHASE":
         return "status status-warning";
-
       case "PAYMENT":
         return "status status-success";
-
       case "RETURN":
         return "status status-danger";
-
       case "CREDIT_NOTE":
         return "status status-success";
-
       default:
         return "status";
     }
   };
 
+  const startEdit = (transaction) => {
+    setEditingTransaction({
+      ...transaction,
+      amount: String(transaction.amount),
+      transaction_date: transaction.transaction_date,
+      reference_number:
+        transaction.reference_number || "",
+      notes: transaction.notes || "",
+    });
+    setError("");
+  };
+
+  const cancelEdit = () => {
+    if (savingEdit) return;
+    setEditingTransaction(null);
+  };
+
+  const handleEditChange = (field, value) => {
+    setEditingTransaction((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const saveEdit = async (event) => {
+    event.preventDefault();
+
+    if (!editingTransaction) return;
+
+    if (
+      !editingTransaction.supplier_id ||
+      !editingTransaction.transaction_type ||
+      !editingTransaction.amount ||
+      Number(editingTransaction.amount) <= 0 ||
+      !editingTransaction.transaction_date
+    ) {
+      alert("Please fill all required transaction fields correctly.");
+      return;
+    }
+
+    try {
+      setSavingEdit(true);
+      setError("");
+
+      const response = await apiFetch(
+        `${API_URL}/api/v1/transactions/${editingTransaction.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            supplier_id: Number(editingTransaction.supplier_id),
+            transaction_type:
+              editingTransaction.transaction_type,
+            amount: Number(editingTransaction.amount),
+            transaction_date:
+              editingTransaction.transaction_date,
+            reference_number:
+              editingTransaction.reference_number.trim() || null,
+            notes:
+              editingTransaction.notes.trim() || null,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.status === 409) {
+        alert(
+          data.detail ||
+            "Another transaction with the same details already exists."
+        );
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          data.detail || "Failed to update transaction"
+        );
+      }
+
+      setEditingTransaction(null);
+      await fetchData();
+      alert("Transaction updated successfully!");
+    } catch (error) {
+      console.error(error);
+      setError(
+        error.message || "Unable to update transaction."
+      );
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const deleteTransaction = async (transaction) => {
+    const confirmed = window.confirm(
+      `Delete this ${transaction.transaction_type.toLowerCase()} of ${formatMoney(
+        transaction.amount
+      )} from ${transaction.supplier_name}?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setDeletingId(transaction.id);
+      setError("");
+
+      const response = await apiFetch(
+        `${API_URL}/api/v1/transactions/${transaction.id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.detail || "Failed to delete transaction"
+        );
+      }
+
+      setTransactions((current) =>
+        current.filter((item) => item.id !== transaction.id)
+      );
+
+      alert("Transaction deleted successfully!");
+    } catch (error) {
+      console.error(error);
+      setError(
+        error.message || "Unable to delete transaction."
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div className="page">
-
       {/* PAGE HEADER */}
       <div
         style={{
@@ -132,10 +224,9 @@ function Transactions() {
       >
         <div>
           <h1>Transactions</h1>
-
           <p className="subtitle">
-            View all purchases, payments, returns and
-            credit notes.
+            View, edit and delete your purchases, payments,
+            returns and credit notes.
           </p>
         </div>
 
@@ -162,29 +253,32 @@ function Transactions() {
 
       {/* TRANSACTIONS SECTION */}
       <div className="section">
-
-        <div
-          style={{
-            marginBottom: "16px",
-          }}
-        >
-          <h2
-            style={{
-              marginBottom: "5px",
-            }}
-          >
+        <div style={{ marginBottom: "16px" }}>
+          <h2 style={{ marginBottom: "5px" }}>
             Transaction History
           </h2>
-
           <p
             style={{
               color: "#6b7280",
               fontSize: "14px",
             }}
           >
-            Review your complete supplier transaction history.
+            Review and manage your complete supplier transaction history.
           </p>
         </div>
+
+        {/* ERROR */}
+        {error && (
+          <div
+            className="card"
+            style={{
+              marginBottom: "18px",
+              borderLeft: "4px solid #dc2626",
+            }}
+          >
+            <p style={{ color: "#dc2626" }}>{error}</p>
+          </div>
+        )}
 
         {/* LOADING */}
         {loading && (
@@ -193,29 +287,9 @@ function Transactions() {
           </div>
         )}
 
-        {/* ERROR */}
-        {error && (
-          <div
-            className="card"
-            style={{
-              borderLeft:
-                "4px solid #dc2626",
-            }}
-          >
-            <p
-              style={{
-                color: "#dc2626",
-              }}
-            >
-              {error}
-            </p>
-          </div>
-        )}
-
         {/* TABLE */}
-        {!loading && !error && (
+        {!loading && (
           <div className="table-container">
-
             <table>
               <thead>
                 <tr>
@@ -225,6 +299,7 @@ function Transactions() {
                   <th>Amount</th>
                   <th>Reference</th>
                   <th>Notes</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
 
@@ -232,7 +307,7 @@ function Transactions() {
                 {transactions.length === 0 ? (
                   <tr>
                     <td
-                      colSpan="6"
+                      colSpan="7"
                       style={{
                         textAlign: "center",
                         padding: "40px",
@@ -243,78 +318,328 @@ function Transactions() {
                     </td>
                   </tr>
                 ) : (
-                  transactions.map(
-                    (transaction) => (
-                      <tr
-                        key={transaction.id}
-                      >
+                  transactions.map((transaction) => (
+                    <tr key={transaction.id}>
+                      <td>{transaction.transaction_date}</td>
 
-                        {/* DATE */}
-                        <td>
-                          {transaction.transaction_date}
-                        </td>
+                      <td>
+                        <strong>
+                          {transaction.supplier_name}
+                        </strong>
+                      </td>
 
-                        {/* SUPPLIER */}
-                        <td>
-                          <strong>
-                            {transaction.supplier_name}
-                          </strong>
-                        </td>
+                      <td>
+                        <span
+                          className={getTransactionClass(
+                            transaction.transaction_type
+                          )}
+                        >
+                          {transaction.transaction_type}
+                        </span>
+                      </td>
 
-                        {/* TYPE */}
-                        <td>
-                          <span
-                            className={getTransactionClass(
-                              transaction.transaction_type
-                            )}
-                          >
-                            {transaction.transaction_type}
-                          </span>
-                        </td>
+                      <td>
+                        <strong style={{ fontSize: "15px" }}>
+                          {formatMoney(transaction.amount)}
+                        </strong>
+                      </td>
 
-                        {/* AMOUNT */}
-                        <td>
-                          <strong
+                      <td>
+                        {transaction.reference_number || "-"}
+                      </td>
+
+                      <td>
+                        <span
+                          style={{
+                            color: transaction.notes
+                              ? "#374151"
+                              : "#9ca3af",
+                          }}
+                        >
+                          {transaction.notes || "-"}
+                        </span>
+                      </td>
+
+                      <td>
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "8px",
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => startEdit(transaction)}
+                            disabled={deletingId === transaction.id}
                             style={{
-                              fontSize: "15px",
+                              border: "1px solid #2563eb",
+                              background: "#eff6ff",
+                              color: "#1d4ed8",
+                              borderRadius: "7px",
+                              padding: "7px 10px",
+                              cursor: "pointer",
+                              fontWeight: "600",
+                              fontSize: "12px",
                             }}
                           >
-                            {formatMoney(
-                              transaction.amount
-                            )}
-                          </strong>
-                        </td>
+                            ✏️ Edit
+                          </button>
 
-                        {/* REFERENCE */}
-                        <td>
-                          {transaction.reference_number ||
-                            "-"}
-                        </td>
-
-                        {/* NOTES */}
-                        <td>
-                          <span
+                          <button
+                            type="button"
+                            onClick={() => deleteTransaction(transaction)}
+                            disabled={deletingId === transaction.id}
                             style={{
-                              color:
-                                transaction.notes
-                                  ? "#374151"
-                                  : "#9ca3af",
+                              border: "1px solid #dc2626",
+                              background: "#fef2f2",
+                              color: "#b91c1c",
+                              borderRadius: "7px",
+                              padding: "7px 10px",
+                              cursor: deletingId === transaction.id
+                                ? "not-allowed"
+                                : "pointer",
+                              fontWeight: "600",
+                              fontSize: "12px",
                             }}
                           >
-                            {transaction.notes || "-"}
-                          </span>
-                        </td>
-
-                      </tr>
-                    )
-                  )
+                            {deletingId === transaction.id
+                              ? "Deleting..."
+                              : "🗑️ Delete"}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
-
           </div>
         )}
       </div>
+
+      {/* EDIT MODAL */}
+      {editingTransaction && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+            zIndex: 1000,
+          }}
+        >
+          <div
+            className="card"
+            style={{
+              width: "100%",
+              maxWidth: "620px",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              padding: "28px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: "15px",
+                marginBottom: "20px",
+              }}
+            >
+              <div>
+                <h2>Edit Transaction</h2>
+                <p
+                  style={{
+                    color: "#6b7280",
+                    fontSize: "13px",
+                    marginTop: "5px",
+                  }}
+                >
+                  Update the transaction details and save the changes.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={cancelEdit}
+                disabled={savingEdit}
+                style={{
+                  border: "none",
+                  background: "#f3f4f6",
+                  borderRadius: "8px",
+                  padding: "8px 11px",
+                  cursor: "pointer",
+                  fontSize: "16px",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={saveEdit}>
+              <div style={{ marginBottom: "16px" }}>
+                <label>Transaction Type</label>
+                <select
+                  value={editingTransaction.transaction_type}
+                  onChange={(e) =>
+                    handleEditChange(
+                      "transaction_type",
+                      e.target.value
+                    )
+                  }
+                  style={{ width: "100%", marginTop: "6px" }}
+                  disabled={savingEdit}
+                >
+                  <option value="PURCHASE">Purchase</option>
+                  <option value="PAYMENT">Payment</option>
+                  <option value="RETURN">Return</option>
+                  <option value="CREDIT_NOTE">Credit Note</option>
+                </select>
+              </div>
+
+              <div style={{ marginBottom: "16px" }}>
+                <label>Supplier</label>
+                <select
+                  value={editingTransaction.supplier_id}
+                  onChange={(e) =>
+                    handleEditChange(
+                      "supplier_id",
+                      e.target.value
+                    )
+                  }
+                  style={{ width: "100%", marginTop: "6px" }}
+                  disabled={savingEdit}
+                >
+                  {suppliers.map((supplier) => (
+                    <option
+                      key={supplier.id}
+                      value={supplier.id}
+                    >
+                      {supplier.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ marginBottom: "16px" }}>
+                <label>Amount</label>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={editingTransaction.amount}
+                  onChange={(e) =>
+                    handleEditChange("amount", e.target.value)
+                  }
+                  style={{ width: "100%", marginTop: "6px" }}
+                  disabled={savingEdit}
+                />
+              </div>
+
+              <div style={{ marginBottom: "16px" }}>
+                <label>Transaction Date</label>
+                <input
+                  type="date"
+                  value={editingTransaction.transaction_date}
+                  onChange={(e) =>
+                    handleEditChange(
+                      "transaction_date",
+                      e.target.value
+                    )
+                  }
+                  style={{ width: "100%", marginTop: "6px" }}
+                  disabled={savingEdit}
+                />
+              </div>
+
+              <div style={{ marginBottom: "16px" }}>
+                <label>Reference Number</label>
+                <input
+                  type="text"
+                  value={editingTransaction.reference_number}
+                  onChange={(e) =>
+                    handleEditChange(
+                      "reference_number",
+                      e.target.value
+                    )
+                  }
+                  placeholder="e.g. INV001"
+                  style={{ width: "100%", marginTop: "6px" }}
+                  disabled={savingEdit}
+                />
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <label>Notes</label>
+                <textarea
+                  value={editingTransaction.notes}
+                  onChange={(e) =>
+                    handleEditChange("notes", e.target.value)
+                  }
+                  placeholder="Enter notes"
+                  rows={4}
+                  style={{
+                    width: "100%",
+                    marginTop: "6px",
+                    resize: "vertical",
+                  }}
+                  disabled={savingEdit}
+                />
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "10px",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={cancelEdit}
+                  disabled={savingEdit}
+                  style={{
+                    border: "1px solid #d1d5db",
+                    background: "#ffffff",
+                    color: "#374151",
+                    borderRadius: "8px",
+                    padding: "10px 16px",
+                    cursor: "pointer",
+                    fontWeight: "600",
+                  }}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  style={{
+                    border: "none",
+                    background: savingEdit
+                      ? "#93c5fd"
+                      : "#2563eb",
+                    color: "#ffffff",
+                    borderRadius: "8px",
+                    padding: "10px 18px",
+                    cursor: savingEdit
+                      ? "not-allowed"
+                      : "pointer",
+                    fontWeight: "600",
+                  }}
+                >
+                  {savingEdit ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

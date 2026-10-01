@@ -1,8 +1,5 @@
 import { useState } from "react";
-import { authFetch } from "../api";
-
-const AI_API_URL =
-  import.meta.env.VITE_AI_URL || "http://127.0.0.1:8001";
+import { aiFetch } from "../api";
 
 function AIInvestigator() {
   const [question, setQuestion] = useState("");
@@ -21,8 +18,8 @@ function AIInvestigator() {
       setError("");
       setAnswer("");
 
-      const response = await authFetch(
-        `${AI_API_URL}/api/v1/ai/investigate`,
+      const response = await aiFetch(
+        `/api/v1/ai/investigate`,
         {
           method: "POST",
           headers: {
@@ -102,8 +99,8 @@ function AIInvestigator() {
         <h1>AI Business Investigator</h1>
 
         <p className="subtitle">
-          Ask questions about your business and
-          get AI-powered insights.
+          Ask questions in Hinglish and
+          get clear AI-powered business insights.
         </p>
       </div>
 
@@ -176,7 +173,7 @@ function AIInvestigator() {
             setError("");
           }}
           onKeyDown={handleKeyDown}
-          placeholder="Example: ABC Electricals ka pending amount kitna hai?"
+          placeholder="Example: ABC Electricals ka pending kitna hai?"
           rows={5}
           disabled={loading}
           style={{
@@ -408,7 +405,7 @@ function AIInvestigator() {
               type="button"
               onClick={() =>
                 setQuestion(
-                  "ABC Electricals ka pending amount kitna hai?"
+                  "ABC Electricals ka pending kitna hai?"
                 )
               }
               style={{
@@ -443,7 +440,7 @@ function AIInvestigator() {
               type="button"
               onClick={() =>
                 setQuestion(
-                  "Kaunsa supplier sabse zyada pending amount rakhta hai?"
+                  "Kaunsa supplier ka pending sabse zyada hai?"
                 )
               }
               style={{
@@ -478,7 +475,7 @@ function AIInvestigator() {
               type="button"
               onClick={() =>
                 setQuestion(
-                  "ABC Electricals ke transactions mein koi unusual activity hai kya?"
+                  "ABC Electricals ke transactions mein kuch unusual lag raha hai kya?"
                 )
               }
               style={{
