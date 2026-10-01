@@ -289,7 +289,14 @@ function Transactions() {
 
         {/* TABLE */}
         {!loading && (
-          <div className="table-container">
+          <div
+            className="table-container"
+            style={{
+              overflowX: "auto",
+              borderRadius: "14px",
+              boxShadow: "0 8px 24px rgba(15, 23, 42, 0.06)",
+            }}
+          >
             <table>
               <thead>
                 <tr>
@@ -299,7 +306,7 @@ function Transactions() {
                   <th>Amount</th>
                   <th>Reference</th>
                   <th>Notes</th>
-                  <th>Actions</th>
+                  <th style={{ minWidth: "145px" }}>Actions</th>
                 </tr>
               </thead>
 
@@ -372,15 +379,20 @@ function Transactions() {
                             type="button"
                             onClick={() => startEdit(transaction)}
                             disabled={deletingId === transaction.id}
+                            title="Edit transaction"
                             style={{
-                              border: "1px solid #2563eb",
+                              border: "1px solid #bfdbfe",
                               background: "#eff6ff",
                               color: "#1d4ed8",
-                              borderRadius: "7px",
-                              padding: "7px 10px",
+                              borderRadius: "8px",
+                              padding: "8px 12px",
                               cursor: "pointer",
-                              fontWeight: "600",
+                              fontWeight: "700",
                               fontSize: "12px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "5px",
+                              transition: "all 0.15s ease",
                             }}
                           >
                             ✏️ Edit
@@ -390,17 +402,22 @@ function Transactions() {
                             type="button"
                             onClick={() => deleteTransaction(transaction)}
                             disabled={deletingId === transaction.id}
+                            title="Delete transaction"
                             style={{
-                              border: "1px solid #dc2626",
-                              background: "#fef2f2",
+                              border: "1px solid #fecaca",
+                              background: "#fff1f2",
                               color: "#b91c1c",
-                              borderRadius: "7px",
-                              padding: "7px 10px",
+                              borderRadius: "8px",
+                              padding: "8px 12px",
                               cursor: deletingId === transaction.id
                                 ? "not-allowed"
                                 : "pointer",
-                              fontWeight: "600",
+                              fontWeight: "700",
                               fontSize: "12px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "5px",
+                              transition: "all 0.15s ease",
                             }}
                           >
                             {deletingId === transaction.id
@@ -424,7 +441,8 @@ function Transactions() {
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0, 0, 0, 0.45)",
+            background: "rgba(15, 23, 42, 0.58)",
+            backdropFilter: "blur(4px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -439,7 +457,10 @@ function Transactions() {
               maxWidth: "620px",
               maxHeight: "90vh",
               overflowY: "auto",
-              padding: "28px",
+              padding: "30px",
+              border: "1px solid #e5e7eb",
+              borderRadius: "18px",
+              boxShadow: "0 24px 70px rgba(15, 23, 42, 0.24)",
             }}
           >
             <div

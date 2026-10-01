@@ -59,272 +59,9 @@ function AddTransaction() {
   // SUPPLIER NAME NORMALIZATION
   // ==========================================
   //
-  // Voice recognition can return:
-  //
-  // हैवेल्स       -> Havells
-  // पॉलीकैब       -> Polycab
-  // पॉलेसी        -> Polycab
-  // एबीसी         -> ABC
-  // इलेक्ट्रिकल   -> Electrical
-  //
-  // This keeps supplier names in English/Hinglish
-  // instead of saving Hindi ASR text directly.
+  // Voice input uses English / Roman Hinglish only.
+  // Supplier names are kept in English-style text.
   // ==========================================
-
-  const supplierWordMap = {
-    // Common electrical brands
-    "हैवेल्स": "Havells",
-    "हैवेल": "Havells",
-    "हैवल्स": "Havells",
-    "हैवल": "Havells",
-    "हैवेलस": "Havells",
-
-    "पॉलीकैब": "Polycab",
-    "पॉलीकैब्स": "Polycab",
-    "पॉलेसी": "Polycab",
-    "पॉलीकेब": "Polycab",
-    "पोलिकैब": "Polycab",
-    "पॉलीकब": "Polycab",
-
-    "एंकर": "Anchor",
-    "एंकर बाय पैनासोनिक": "Anchor",
-    "फिनोलेक्स": "Finolex",
-    "फिनोलेक्स": "Finolex",
-    "क्रॉम्पटन": "Crompton",
-    "लेग्रैंड": "Legrand",
-    "लेग्रां": "Legrand",
-    "श्नाइडर": "Schneider",
-    "फिलिप्स": "Philips",
-    "विप्रो": "Wipro",
-    "बजाज": "Bajaj",
-    "आरआर": "RR",
-    "आर आर": "RR",
-
-    // Common company words
-    "इलेक्ट्रिकल": "Electrical",
-    "इलेक्ट्रिकल्स": "Electricals",
-    "इलेक्ट्रिक": "Electric",
-    "इलेक्ट्रॉनिक्स": "Electronics",
-    "इलेक्ट्रॉनिक": "Electronic",
-
-    "ट्रेडर्स": "Traders",
-    "ट्रेडर": "Trader",
-    "एंटरप्राइजेज": "Enterprises",
-    "एंटरप्राइज": "Enterprise",
-    "इंटरप्राइजेज": "Enterprises",
-    "इंटरप्राइज": "Enterprise",
-    "हार्डवेयर": "Hardware",
-    "सप्लायर्स": "Suppliers",
-    "सप्लायर": "Supplier",
-    "स्टोर्स": "Stores",
-    "स्टोर": "Store",
-    "इंडस्ट्रीज": "Industries",
-    "इंडस्ट्री": "Industry",
-    "कॉर्पोरेशन": "Corporation",
-    "कॉरपोरेशन": "Corporation",
-    "कंपनी": "Company",
-
-    // Alphabet ASR variants
-    "एबीसी": "ABC",
-    "ए बी सी": "ABC",
-    "एबीसीडी": "ABCD",
-    "आरएस": "RS",
-    "आर एस": "RS",
-    "एसके": "SK",
-    "एस के": "SK",
-    "एमके": "MK",
-    "एम के": "MK",
-  };
-
-
-  // ------------------------------------------
-  // Generic Hindi -> Hinglish transliteration
-  // ------------------------------------------
-
-  const devanagariToLatin = (text) => {
-
-    const consonants = {
-      "क": "k",
-      "ख": "kh",
-      "ग": "g",
-      "घ": "gh",
-      "ङ": "ng",
-
-      "च": "ch",
-      "छ": "chh",
-      "ज": "j",
-      "झ": "jh",
-      "ञ": "ny",
-
-      "ट": "t",
-      "ठ": "th",
-      "ड": "d",
-      "ढ": "dh",
-      "ण": "n",
-
-      "त": "t",
-      "थ": "th",
-      "द": "d",
-      "ध": "dh",
-      "न": "n",
-
-      "प": "p",
-      "फ": "ph",
-      "ब": "b",
-      "भ": "bh",
-      "म": "m",
-
-      "य": "y",
-      "र": "r",
-      "ल": "l",
-      "व": "v",
-
-      "श": "sh",
-      "ष": "sh",
-      "स": "s",
-      "ह": "h",
-
-      "क्ष": "ksh",
-      "त्र": "tr",
-      "ज्ञ": "gya",
-    };
-
-
-    const vowels = {
-      "अ": "a",
-      "आ": "aa",
-      "इ": "i",
-      "ई": "ee",
-      "उ": "u",
-      "ऊ": "oo",
-      "ए": "e",
-      "ऐ": "ai",
-      "ओ": "o",
-      "औ": "au",
-    };
-
-
-    const matras = {
-      "ा": "aa",
-      "ि": "i",
-      "ी": "ee",
-      "ु": "u",
-      "ू": "oo",
-      "ृ": "ri",
-      "े": "e",
-      "ै": "ai",
-      "ो": "o",
-      "ौ": "au",
-    };
-
-
-    const special = {
-      "ं": "n",
-      "ँ": "n",
-      "ः": "h",
-      "़": "",
-      "्": "",
-    };
-
-
-    let result = "";
-
-    for (let i = 0; i < text.length; i++) {
-
-      const char = text[i];
-
-      // Handle common conjuncts
-      if (
-        text.slice(i, i + 2) === "क्ष"
-      ) {
-        result += "ksh";
-        i++;
-        continue;
-      }
-
-      if (
-        text.slice(i, i + 2) === "त्र"
-      ) {
-        result += "tr";
-        i++;
-        continue;
-      }
-
-      if (
-        text.slice(i, i + 2) === "ज्ञ"
-      ) {
-        result += "gya";
-        i++;
-        continue;
-      }
-
-
-      if (consonants[char]) {
-
-        result += consonants[char];
-
-        // Look ahead for matra
-        const next = text[i + 1];
-
-        if (matras[next]) {
-
-          result += matras[next];
-
-          i++;
-
-        } else if (next === "्") {
-
-          // Halant means no automatic vowel.
-          // The next consonant follows directly.
-          i++;
-
-        } else {
-
-          // Natural Hindi default vowel.
-          result += "a";
-
-        }
-
-        continue;
-      }
-
-
-      if (vowels[char]) {
-
-        result += vowels[char];
-
-        continue;
-      }
-
-
-      if (matras[char]) {
-
-        result += matras[char];
-
-        continue;
-      }
-
-
-      if (special[char]) {
-
-        result += special[char];
-
-        continue;
-      }
-
-
-      // Numbers, English letters, spaces etc.
-      result += char;
-    }
-
-
-    return result;
-  };
-
-
-  // ------------------------------------------
-  // Convert ASR supplier name to English
-  // ------------------------------------------
 
   const normalizeSupplierName = (rawName) => {
 
@@ -332,149 +69,39 @@ function AddTransaction() {
       return "";
     }
 
-
-    let name = rawName
+    let name = String(rawName)
       .trim()
-      .replace(/\s+/g, " ");
+      .replace(/\\s+/g, " ");
 
+    name = name
+      .replace(/[“”"'`]/g, "")
+      .replace(/\\s+/g, " ")
+      .trim();
 
-    // --------------------------------------
-    // Exact common-name match
-    // --------------------------------------
-
-    const exactMatch =
-      supplierWordMap[name];
-
-    if (exactMatch) {
-      return exactMatch;
+    if (!name) {
+      return "";
     }
 
+    return name
+      .split(" ")
+      .map((word) => {
 
-    // --------------------------------------
-    // Replace known Hindi words inside name
-    // --------------------------------------
-
-    const words =
-      name.split(" ");
-
-
-    const convertedWords =
-      words.map((word) => {
-
-        if (supplierWordMap[word]) {
-
-          return supplierWordMap[word];
-
+        if (!word) {
+          return word;
         }
 
-        return word;
+        if (/^[A-Z0-9]+$/.test(word)) {
+          return word;
+        }
 
-      });
+        return (
+          word.charAt(0).toUpperCase() +
+          word.slice(1)
+        );
 
-
-    name =
-      convertedWords.join(" ");
-
-
-    // --------------------------------------
-    // Special phrase replacements
-    // --------------------------------------
-
-    const phraseMap = [
-      ["एबीसी इलेक्ट्रिकल", "ABC Electrical"],
-      ["एबीसी इलेक्ट्रिकल्स", "ABC Electricals"],
-
-      ["हैवेल्स इलेक्ट्रिकल", "Havells Electrical"],
-      ["हैवेल्स इलेक्ट्रिकल्स", "Havells Electricals"],
-
-      ["पॉलीकैब इलेक्ट्रिकल", "Polycab Electrical"],
-      ["पॉलीकैब इलेक्ट्रिकल्स", "Polycab Electricals"],
-
-      ["पॉलेसी इलेक्ट्रिकल", "Polycab Electrical"],
-      ["पॉलेसी इलेक्ट्रिकल्स", "Polycab Electricals"],
-
-      ["एंकर इलेक्ट्रिकल", "Anchor Electrical"],
-      ["एंकर इलेक्ट्रिकल्स", "Anchor Electricals"],
-
-      ["फिनोलेक्स इलेक्ट्रिकल", "Finolex Electrical"],
-      ["फिनोलेक्स इलेक्ट्रिकल्स", "Finolex Electricals"],
-    ];
-
-
-    for (const [hindi, english] of phraseMap) {
-
-      if (
-        name
-          .toLowerCase()
-          .includes(hindi.toLowerCase())
-      ) {
-
-        name =
-          name.replace(
-            new RegExp(hindi, "gi"),
-            english
-          );
-
-      }
-
-    }
-
-
-    // --------------------------------------
-    // If Devanagari is still present,
-    // transliterate remaining text.
-    // --------------------------------------
-
-    if (/[\u0900-\u097F]/.test(name)) {
-
-      name =
-        devanagariToLatin(name);
-
-    }
-
-
-    // --------------------------------------
-    // Clean spacing
-    // --------------------------------------
-
-    name =
-      name
-        .replace(/\s+/g, " ")
-        .trim();
-
-
-    // --------------------------------------
-    // Make first letter of words uppercase
-    // but preserve acronyms like ABC / RR.
-    // --------------------------------------
-
-    name =
-      name
-        .split(" ")
-        .map((word) => {
-
-          if (!word) {
-            return word;
-          }
-
-          if (
-            /^[A-Z0-9]+$/.test(word)
-          ) {
-            return word;
-          }
-
-          return (
-            word.charAt(0).toUpperCase() +
-            word.slice(1)
-          );
-
-        })
-        .join(" ");
-
-
-    return name;
+      })
+      .join(" ");
   };
-
 
   // ==========================================
   // FETCH SUPPLIERS
@@ -730,13 +357,6 @@ function AddTransaction() {
         return;
 
       }
-
-
-      // --------------------------------------
-      // IMPORTANT:
-      // Convert Hindi ASR name to English/
-      // Hinglish before saving.
-      // --------------------------------------
 
       const detectedSupplierName =
         voiceResult.supplier_name.trim();
@@ -1001,7 +621,10 @@ function AddTransaction() {
 
 
       recognition.lang =
-        "hi-IN";
+        "en-IN";
+
+      recognition.maxAlternatives =
+        3;
 
       recognition.continuous =
         false;
