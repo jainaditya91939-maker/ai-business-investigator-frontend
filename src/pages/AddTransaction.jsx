@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { API_URL, AI_API_URL, authFetch } from "../api";
-
+import { aiFetch, apiFetch } from "../api";
 
 function AddTransaction() {
 
@@ -17,7 +16,9 @@ function AddTransaction() {
   const [referenceNumber, setReferenceNumber] = useState("");
   const [notes, setNotes] = useState("");
 
-  const [loadingSuppliers, setLoadingSuppliers] = useState(true);
+  const [loadingSuppliers, setLoadingSuppliers] =
+    useState(true);
+
   const [saving, setSaving] = useState(false);
 
 
@@ -25,18 +26,31 @@ function AddTransaction() {
   // VOICE STATES
   // ==========================================
 
-  const [listening, setListening] = useState(false);
-  const [voiceText, setVoiceText] = useState("");
-  const [voiceResult, setVoiceResult] = useState(null);
+  const [listening, setListening] =
+    useState(false);
+
+  const [voiceText, setVoiceText] =
+    useState("");
+
+  const [voiceResult, setVoiceResult] =
+    useState(null);
+
+  const [addingVoiceSupplier, setAddingVoiceSupplier] =
+    useState(false);
 
 
   // ==========================================
   // INVOICE STATES
   // ==========================================
 
-  const [invoiceFile, setInvoiceFile] = useState(null);
-  const [invoiceLoading, setInvoiceLoading] = useState(false);
-  const [invoiceResult, setInvoiceResult] = useState(null);
+  const [invoiceFile, setInvoiceFile] =
+    useState(null);
+
+  const [invoiceLoading, setInvoiceLoading] =
+    useState(false);
+
+  const [invoiceResult, setInvoiceResult] =
+    useState(null);
 
 
   // ==========================================
@@ -49,15 +63,19 @@ function AddTransaction() {
 
       try {
 
-        const response = await authFetch(
-          `${API_URL}/api/v1/suppliers`
-        );
+        const response =
+          await apiFetch(
+            "/api/v1/suppliers"
+          );
 
         if (!response.ok) {
-          throw new Error("Failed to fetch suppliers");
+          throw new Error(
+            "Failed to fetch suppliers"
+          );
         }
 
-        const data = await response.json();
+        const data =
+          await response.json();
 
         setSuppliers(data);
 
@@ -65,7 +83,9 @@ function AddTransaction() {
 
         console.error(error);
 
-        alert("Unable to load suppliers.");
+        alert(
+          "Unable to load suppliers."
+        );
 
       } finally {
 
@@ -88,75 +108,82 @@ function AddTransaction() {
 
     event.preventDefault();
 
-
     if (!supplierId) {
 
-      alert("Please select a supplier.");
+      alert(
+        "Please select a supplier."
+      );
 
       return;
 
     }
 
+    if (
+      !amount ||
+      Number(amount) <= 0
+    ) {
 
-    if (!amount || Number(amount) <= 0) {
-
-      alert("Please enter a valid amount.");
+      alert(
+        "Please enter a valid amount."
+      );
 
       return;
 
     }
-
 
     if (!date) {
 
-      alert("Please select a date.");
+      alert(
+        "Please select a date."
+      );
 
       return;
 
     }
-
 
     try {
 
       setSaving(true);
 
+      const response =
+        await apiFetch(
+          "/api/v1/transactions",
+          {
+            method: "POST",
 
-      const response = await authFetch(
-        `${API_URL}/api/v1/transactions`,
-        {
-          method: "POST",
+            body: JSON.stringify({
 
-          headers: {
-            "Content-Type": "application/json",
-          },
+              supplier_id:
+                Number(supplierId),
 
-          body: JSON.stringify({
+              transaction_type:
+                type,
 
-            supplier_id: Number(supplierId),
+              amount:
+                Number(amount),
 
-            transaction_type: type,
+              transaction_date:
+                date,
 
-            amount: Number(amount),
+              reference_number:
+                referenceNumber.trim() ||
+                null,
 
-            transaction_date: date,
+              notes:
+                notes.trim() ||
+                null,
 
-            reference_number:
-              referenceNumber.trim() || null,
+            }),
 
-            notes:
-              notes.trim() || null,
+          }
+        );
 
-          }),
+      const responseData =
+        await response.json();
 
-        }
-      );
-
-
-      const responseData = await response.json();
-
-
-      // Duplicate
-      if (response.status === 409) {
+      if (
+        response.status === 409
+      ) {
 
         alert(
           "Duplicate transaction detected. This transaction was not saved."
@@ -166,8 +193,6 @@ function AddTransaction() {
 
       }
 
-
-      // Other backend errors
       if (!response.ok) {
 
         throw new Error(
@@ -177,12 +202,10 @@ function AddTransaction() {
 
       }
 
+      alert(
+        "Transaction added successfully!"
+      );
 
-      // Success
-      alert("Transaction added successfully!");
-
-
-      // Clear form
       setType("PURCHASE");
       setSupplierId("");
       setAmount("");
@@ -190,9 +213,8 @@ function AddTransaction() {
       setReferenceNumber("");
       setNotes("");
 
-
-      window.location.href = "/transactions";
-
+      window.location.href =
+        "/transactions";
 
     } catch (error) {
 
@@ -213,103 +235,200 @@ function AddTransaction() {
 
 
   // ==========================================
-  // VOICE TRANSACTION
+  // SEND VOICE TEXT
   // ==========================================
 
-  const handleVoiceTransaction = () => {
+  const sendVoiceText =
+    async (spokenText) => {
 
-    setVoiceResult(null);
-    setVoiceText("");
-
-
-    const SpeechRecognition =
-      window.SpeechRecognition ||
-      window.webkitSpeechRecognition;
-
-
-    if (!SpeechRecognition) {
-
-      alert(
-        "Speech recognition is not supported in this browser."
-      );
-
-      return;
-
-    }
-
-
-    const recognition = new SpeechRecognition();
-
-
-    recognition.lang = "hi-IN";
-
-    recognition.continuous = false;
-
-    recognition.interimResults = false;
-
-
-    recognition.onstart = () => {
-
-      setListening(true);
-
-    };
-
-
-    recognition.onresult = async (event) => {
-
-      const text =
-        event.results[0][0].transcript;
-
-
-      setVoiceText(text);
-
-      setListening(false);
-
-
-      // Send speech text to AI service
-      try {
-
-        const response = await authFetch(
-          `${AI_API_URL}/api/v1/ai/voice/transaction`,
+      const response =
+        await aiFetch(
+          "/api/v1/ai/voice/transaction",
           {
             method: "POST",
 
-            headers: {
-              "Content-Type": "application/json",
-            },
-
             body: JSON.stringify({
-              text: text,
+              text: spokenText,
             }),
 
           }
         );
 
+      const data =
+        await response.json();
 
-        const data = await response.json();
+      if (!response.ok) {
+
+        throw new Error(
+          data.detail ||
+          "Voice transaction failed"
+        );
+
+      }
+
+      return data;
+
+    };
 
 
-        if (!response.ok) {
+  // ==========================================
+  // ADD UNKNOWN VOICE SUPPLIER
+  // ==========================================
+
+  const handleAddVoiceSupplier =
+    async () => {
+
+      if (
+        !voiceResult?.supplier_name ||
+        !voiceText
+      ) {
+
+        return;
+
+      }
+
+      const supplierName =
+        voiceResult.supplier_name.trim();
+
+      const addConfirmed =
+        window.confirm(
+          `Supplier "${supplierName}" is not in your supplier list.\n\n` +
+          `Do you want to add "${supplierName}" as a new supplier?`
+        );
+
+      if (!addConfirmed) {
+        return;
+      }
+
+      try {
+
+        setAddingVoiceSupplier(true);
+
+        // ------------------------------------
+        // CREATE SUPPLIER
+        // ------------------------------------
+
+        const createResponse =
+          await apiFetch(
+            "/api/v1/suppliers",
+            {
+              method: "POST",
+
+              body: JSON.stringify({
+
+                name:
+                  supplierName,
+
+                phone:
+                  null,
+
+                address:
+                  null,
+
+              }),
+
+            }
+          );
+
+        const createData =
+          await createResponse.json();
+
+        if (
+          createResponse.status !== 409 &&
+          !createResponse.ok
+        ) {
 
           throw new Error(
-            data.detail ||
-            "Voice transaction failed"
+            createData.detail ||
+            "Unable to create supplier"
           );
 
         }
 
+        // ------------------------------------
+        // UPDATE SUPPLIER LIST
+        // ------------------------------------
 
-        setVoiceResult(data);
+        setSuppliers(
+          (current) => {
 
+            if (
+              createResponse.status ===
+              409
+            ) {
 
-        // Successful transaction
-        if (data.status === "SUCCESS") {
+              return current;
 
-          alert(
-            "Voice transaction saved successfully!"
+            }
+
+            const created =
+              createData.supplier;
+
+            if (!created) {
+              return current;
+            }
+
+            return [
+              ...current,
+              created
+            ];
+
+          }
+        );
+
+        // ------------------------------------
+        // CONFIRM TRANSACTION
+        // ------------------------------------
+
+        const saveConfirmed =
+          window.confirm(
+            `"${supplierName}" is ready.\n\n` +
+            `Do you want to save this voice transaction now?`
           );
 
-          window.location.href = "/transactions";
+        if (!saveConfirmed) {
+
+          setVoiceResult({
+
+            status:
+              "SUPPLIER_ADDED",
+
+            message:
+              `Supplier "${supplierName}" was added. Transaction was not saved.`,
+
+            supplier_name:
+              supplierName,
+
+          });
+
+          return;
+
+        }
+
+        // ------------------------------------
+        // RETRY ORIGINAL VOICE TRANSACTION
+        // ------------------------------------
+
+        const retryData =
+          await sendVoiceText(
+            voiceText
+          );
+
+        setVoiceResult(
+          retryData
+        );
+
+        if (
+          retryData.status ===
+          "SUCCESS"
+        ) {
+
+          alert(
+            "Supplier added and voice transaction saved successfully!"
+          );
+
+          window.location.href =
+            "/transactions";
 
         }
 
@@ -318,173 +437,303 @@ function AddTransaction() {
         console.error(error);
 
         setVoiceResult({
-          status: "ERROR",
+
+          status:
+            "ERROR",
+
           message:
             error.message ||
-            "Voice transaction failed",
+            "Unable to add supplier or save transaction.",
+
+          supplier_name:
+            supplierName,
+
         });
+
+      } finally {
+
+        setAddingVoiceSupplier(
+          false
+        );
 
       }
 
     };
 
 
-    recognition.onerror = (event) => {
+  // ==========================================
+  // VOICE TRANSACTION
+  // ==========================================
 
-      console.error(
-        "Speech recognition error:",
-        event.error
-      );
+  const handleVoiceTransaction =
+    () => {
 
-      setListening(false);
+      setVoiceResult(null);
 
-      setVoiceResult({
-        status: "ERROR",
-        message:
-          "Could not understand the speech.",
-      });
+      setVoiceText("");
+
+      const SpeechRecognition =
+        window.SpeechRecognition ||
+        window.webkitSpeechRecognition;
+
+      if (!SpeechRecognition) {
+
+        alert(
+          "Speech recognition is not supported in this browser."
+        );
+
+        return;
+
+      }
+
+      const recognition =
+        new SpeechRecognition();
+
+      recognition.lang =
+        "hi-IN";
+
+      recognition.continuous =
+        false;
+
+      recognition.interimResults =
+        false;
+
+      recognition.onstart =
+        () => {
+
+          setListening(true);
+
+        };
+
+      recognition.onresult =
+        async (event) => {
+
+          const spokenText =
+            event.results[0][0]
+              .transcript;
+
+          setVoiceText(
+            spokenText
+          );
+
+          setListening(false);
+
+          try {
+
+            const data =
+              await sendVoiceText(
+                spokenText
+              );
+
+            setVoiceResult(
+              data
+            );
+
+            if (
+              data.status ===
+              "SUCCESS"
+            ) {
+
+              alert(
+                "Voice transaction saved successfully!"
+              );
+
+              window.location.href =
+                "/transactions";
+
+            }
+
+          } catch (error) {
+
+            console.error(error);
+
+            setVoiceResult({
+
+              status:
+                "ERROR",
+
+              message:
+                error.message ||
+                "Voice transaction failed",
+
+            });
+
+          }
+
+        };
+
+      recognition.onerror =
+        (event) => {
+
+          console.error(
+            "Speech recognition error:",
+            event.error
+          );
+
+          setListening(false);
+
+          setVoiceResult({
+
+            status:
+              "ERROR",
+
+            message:
+              "Could not understand the speech.",
+
+          });
+
+        };
+
+      recognition.onend =
+        () => {
+
+          setListening(false);
+
+        };
+
+      recognition.start();
 
     };
-
-
-    recognition.onend = () => {
-
-      setListening(false);
-
-    };
-
-
-    recognition.start();
-
-  };
 
 
   // ==========================================
   // INVOICE FILE SELECT
   // ==========================================
 
-  const handleInvoiceChange = (event) => {
+  const handleInvoiceChange =
+    (event) => {
 
-    const file = event.target.files?.[0];
+      const file =
+        event.target.files?.[0];
 
-    setInvoiceResult(null);
+      setInvoiceResult(null);
 
+      if (!file) {
 
-    if (!file) {
+        setInvoiceFile(null);
 
-      setInvoiceFile(null);
+        return;
 
-      return;
+      }
 
-    }
+      if (
+        !file.type.startsWith(
+          "image/"
+        )
+      ) {
 
+        alert(
+          "Please select an invoice image."
+        );
 
-    if (!file.type.startsWith("image/")) {
+        event.target.value =
+          "";
 
-      alert(
-        "Please select an invoice image."
-      );
+        setInvoiceFile(null);
 
-      event.target.value = "";
+        return;
 
-      setInvoiceFile(null);
+      }
 
-      return;
+      setInvoiceFile(file);
 
-    }
-
-
-    setInvoiceFile(file);
-
-  };
+    };
 
 
   // ==========================================
   // INVOICE UPLOAD
   // ==========================================
 
-  const handleInvoiceUpload = async () => {
+  const handleInvoiceUpload =
+    async () => {
 
-    if (!invoiceFile) {
-
-      alert(
-        "Please select an invoice image first."
-      );
-
-      return;
-
-    }
-
-
-    try {
-
-      setInvoiceLoading(true);
-
-      setInvoiceResult(null);
-
-
-      const formData = new FormData();
-
-      formData.append(
-        "file",
-        invoiceFile
-      );
-
-
-      const response = await authFetch(
-        `${AI_API_URL}/api/v1/ai/invoice/transaction`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-
-      const data = await response.json();
-
-
-      if (!response.ok) {
-
-        throw new Error(
-          data.detail ||
-          "Invoice processing failed"
-        );
-
-      }
-
-
-      setInvoiceResult(data);
-
-
-      // Successful invoice transaction
-      if (data.status === "SUCCESS") {
+      if (!invoiceFile) {
 
         alert(
-          "Invoice transaction saved successfully!"
+          "Please select an invoice image first."
         );
 
-        window.location.href = "/transactions";
+        return;
 
       }
 
-    } catch (error) {
+      try {
 
-      console.error(error);
+        setInvoiceLoading(true);
 
-      setInvoiceResult({
-        status: "ERROR",
-        message:
-          error.message ||
-          "Unable to process invoice.",
-      });
+        setInvoiceResult(null);
 
-    } finally {
+        const formData =
+          new FormData();
 
-      setInvoiceLoading(false);
+        formData.append(
+          "file",
+          invoiceFile
+        );
 
-    }
+        const response =
+          await aiFetch(
+            "/api/v1/ai/invoice/transaction",
+            {
+              method: "POST",
+              body: formData,
+            }
+          );
 
-  };
+        const data =
+          await response.json();
+
+        if (!response.ok) {
+
+          throw new Error(
+            data.detail ||
+            "Invoice processing failed"
+          );
+
+        }
+
+        setInvoiceResult(
+          data
+        );
+
+        if (
+          data.status ===
+          "SUCCESS"
+        ) {
+
+          alert(
+            "Invoice transaction saved successfully!"
+          );
+
+          window.location.href =
+            "/transactions";
+
+        }
+
+      } catch (error) {
+
+        console.error(error);
+
+        setInvoiceResult({
+
+          status:
+            "ERROR",
+
+          message:
+            error.message ||
+            "Unable to process invoice.",
+
+        });
+
+      } finally {
+
+        setInvoiceLoading(
+          false
+        );
+
+      }
+
+    };
 
 
   // ==========================================
@@ -495,16 +744,19 @@ function AddTransaction() {
 
     <div className="page">
 
-      <h1>Add Transaction</h1>
+      <h1>
+        Add Transaction
+      </h1>
 
       <p className="subtitle">
-        Record a purchase, payment, return or credit note.
+        Record a purchase, payment,
+        return or credit note.
       </p>
 
 
-      {/* ======================================
+      {/* =====================================
           VOICE TRANSACTION
-      ====================================== */}
+      ===================================== */}
 
       <div
         style={{
@@ -512,7 +764,8 @@ function AddTransaction() {
           padding: "24px",
           borderRadius: "16px",
           marginBottom: "30px",
-          boxShadow: "0 4px 15px rgba(0,0,0,0.08)",
+          boxShadow:
+            "0 4px 15px rgba(0,0,0,0.08)",
         }}
       >
 
@@ -522,14 +775,19 @@ function AddTransaction() {
 
         <p>
           Example:
-          "ABC Electricals se 5000 rupaye ka purchase 12 September 2026 ko kiya"
+          "Polycab se 500 rupaye ka
+          purchase kiya"
         </p>
-
 
         <button
           type="button"
-          onClick={handleVoiceTransaction}
-          disabled={listening}
+          onClick={
+            handleVoiceTransaction
+          }
+          disabled={
+            listening ||
+            addingVoiceSupplier
+          }
         >
 
           {listening
@@ -571,7 +829,10 @@ function AddTransaction() {
               padding: "15px",
               borderRadius: "10px",
               background:
-                voiceResult.status === "SUCCESS"
+                voiceResult.status ===
+                  "SUCCESS" ||
+                voiceResult.status ===
+                  "SUPPLIER_ADDED"
                   ? "#e8f7e8"
                   : "#ffe8e8",
             }}
@@ -589,9 +850,12 @@ function AddTransaction() {
             {voiceResult.missing_fields && (
 
               <p>
-                Missing:
-                {" "}
-                {voiceResult.missing_fields.join(", ")}
+                Missing:{" "}
+                {
+                  voiceResult
+                    .missing_fields
+                    .join(", ")
+                }
               </p>
 
             )}
@@ -600,10 +864,95 @@ function AddTransaction() {
             {voiceResult.supplier_name && (
 
               <p>
-                Supplier:
-                {" "}
-                {voiceResult.supplier_name}
+                Supplier:{" "}
+                {
+                  voiceResult
+                    .supplier_name
+                }
               </p>
+
+            )}
+
+
+            {voiceResult.status ===
+              "SUPPLIER_NOT_FOUND" && (
+
+              <button
+                type="button"
+                onClick={
+                  handleAddVoiceSupplier
+                }
+                disabled={
+                  addingVoiceSupplier
+                }
+                style={{
+                  marginTop: "10px",
+                }}
+              >
+
+                {addingVoiceSupplier
+                  ? "Adding Supplier..."
+                  : "➕ Add Supplier & Continue"}
+
+              </button>
+
+            )}
+
+
+            {voiceResult.transaction && (
+
+              <div>
+
+                <p>
+                  <strong>
+                    Supplier:
+                  </strong>{" "}
+                  {
+                    voiceResult
+                      .transaction
+                      .supplier_name ||
+                    "Not found"
+                  }
+                </p>
+
+                <p>
+                  <strong>
+                    Amount:
+                  </strong>{" "}
+                  ₹
+                  {
+                    voiceResult
+                      .transaction
+                      .amount ??
+                    "Not found"
+                  }
+                </p>
+
+                <p>
+                  <strong>
+                    Date:
+                  </strong>{" "}
+                  {
+                    voiceResult
+                      .transaction
+                      .transaction_date ||
+                    "Not found"
+                  }
+                </p>
+
+                <p>
+                  <strong>
+                    Reference:
+                  </strong>{" "}
+                  {
+                    voiceResult
+                      .transaction
+                      .reference_number ||
+                    "Not found"
+                  }
+                </p>
+
+              </div>
 
             )}
 
@@ -614,9 +963,9 @@ function AddTransaction() {
       </div>
 
 
-      {/* ======================================
+      {/* =====================================
           INVOICE TRANSACTION
-      ====================================== */}
+      ===================================== */}
 
       <div
         style={{
@@ -624,7 +973,8 @@ function AddTransaction() {
           padding: "24px",
           borderRadius: "16px",
           marginBottom: "30px",
-          boxShadow: "0 4px 15px rgba(0,0,0,0.08)",
+          boxShadow:
+            "0 4px 15px rgba(0,0,0,0.08)",
         }}
       >
 
@@ -633,16 +983,21 @@ function AddTransaction() {
         </h2>
 
         <p>
-          Upload a GST/tax invoice and AI will
-          extract the transaction details.
+          Upload a GST/tax invoice and AI
+          will extract the transaction
+          details.
         </p>
 
 
         <input
           type="file"
           accept="image/*"
-          onChange={handleInvoiceChange}
-          disabled={invoiceLoading}
+          onChange={
+            handleInvoiceChange
+          }
+          disabled={
+            invoiceLoading
+          }
         />
 
 
@@ -654,8 +1009,7 @@ function AddTransaction() {
             }}
           >
 
-            Selected:
-            {" "}
+            Selected:{" "}
             <strong>
               {invoiceFile.name}
             </strong>
@@ -667,7 +1021,9 @@ function AddTransaction() {
 
         <button
           type="button"
-          onClick={handleInvoiceUpload}
+          onClick={
+            handleInvoiceUpload
+          }
           disabled={
             invoiceLoading ||
             !invoiceFile
@@ -689,7 +1045,8 @@ function AddTransaction() {
               padding: "18px",
               borderRadius: "10px",
               background:
-                invoiceResult.status === "SUCCESS"
+                invoiceResult.status ===
+                "SUCCESS"
                   ? "#e8f7e8"
                   : "#ffe8e8",
             }}
@@ -699,20 +1056,22 @@ function AddTransaction() {
               Invoice Result
             </h3>
 
-
             <p>
               <strong>
                 Status:
-              </strong>
-              {" "}
-              {invoiceResult.status}
+              </strong>{" "}
+              {
+                invoiceResult.status
+              }
             </p>
 
 
             {invoiceResult.message && (
 
               <p>
-                {invoiceResult.message}
+                {
+                  invoiceResult.message
+                }
               </p>
 
             )}
@@ -723,9 +1082,12 @@ function AddTransaction() {
               <p>
                 <strong>
                   Missing:
-                </strong>
-                {" "}
-                {invoiceResult.missing_fields.join(", ")}
+                </strong>{" "}
+                {
+                  invoiceResult
+                    .missing_fields
+                    .join(", ")
+                }
               </p>
 
             )}
@@ -736,9 +1098,11 @@ function AddTransaction() {
               <p>
                 <strong>
                   Supplier:
-                </strong>
-                {" "}
-                {invoiceResult.supplier_name}
+                </strong>{" "}
+                {
+                  invoiceResult
+                    .supplier_name
+                }
               </p>
 
             )}
@@ -751,37 +1115,50 @@ function AddTransaction() {
                 <p>
                   <strong>
                     Supplier:
-                  </strong>
-                  {" "}
-                  {invoiceResult.transaction.supplier_name ||
-                    "Not found"}
+                  </strong>{" "}
+                  {
+                    invoiceResult
+                      .transaction
+                      .supplier_name ||
+                    "Not found"
+                  }
                 </p>
 
                 <p>
                   <strong>
                     Amount:
-                  </strong>
-                  {" "}
+                  </strong>{" "}
                   ₹
-                  {invoiceResult.transaction.amount ?? "Not found"}
+                  {
+                    invoiceResult
+                      .transaction
+                      .amount ??
+                    "Not found"
+                  }
                 </p>
 
                 <p>
                   <strong>
                     Date:
-                  </strong>
-                  {" "}
-                  {invoiceResult.transaction.transaction_date ||
-                    "Not found"}
+                  </strong>{" "}
+                  {
+                    invoiceResult
+                      .transaction
+                      .transaction_date ||
+                    "Not found"
+                  }
                 </p>
 
                 <p>
                   <strong>
                     Reference:
-                  </strong>
-                  {" "}
-                  {invoiceResult.transaction.reference_number ||
-                    "Not found"}
+                  </strong>{" "}
+                  {
+                    invoiceResult
+                      .transaction
+                      .reference_number ||
+                    "Not found"
+                  }
                 </p>
 
               </div>
@@ -795,13 +1172,15 @@ function AddTransaction() {
       </div>
 
 
-      {/* ======================================
+      {/* =====================================
           MANUAL TRANSACTION
-      ====================================== */}
+      ===================================== */}
 
-      <form onSubmit={handleSubmit}>
-
-        {/* Transaction Type */}
+      <form
+        onSubmit={
+          handleSubmit
+        }
+      >
 
         <div>
 
@@ -813,8 +1192,11 @@ function AddTransaction() {
 
           <select
             value={type}
-            onChange={(e) =>
-              setType(e.target.value)
+            onChange={
+              (e) =>
+                setType(
+                  e.target.value
+                )
             }
           >
 
@@ -842,8 +1224,6 @@ function AddTransaction() {
         <br />
 
 
-        {/* Supplier */}
-
         <div>
 
           <label>
@@ -861,9 +1241,14 @@ function AddTransaction() {
           ) : (
 
             <select
-              value={supplierId}
-              onChange={(e) =>
-                setSupplierId(e.target.value)
+              value={
+                supplierId
+              }
+              onChange={
+                (e) =>
+                  setSupplierId(
+                    e.target.value
+                  )
               }
             >
 
@@ -871,16 +1256,24 @@ function AddTransaction() {
                 Select Supplier
               </option>
 
-              {suppliers.map((supplier) => (
+              {suppliers.map(
+                (supplier) => (
 
-                <option
-                  key={supplier.id}
-                  value={supplier.id}
-                >
-                  {supplier.name}
-                </option>
+                  <option
+                    key={
+                      supplier.id
+                    }
+                    value={
+                      supplier.id
+                    }
+                  >
+                    {
+                      supplier.name
+                    }
+                  </option>
 
-              ))}
+                )
+              )}
 
             </select>
 
@@ -891,8 +1284,6 @@ function AddTransaction() {
 
         <br />
 
-
-        {/* Amount */}
 
         <div>
 
@@ -908,8 +1299,11 @@ function AddTransaction() {
             min="0.01"
             placeholder="Enter amount"
             value={amount}
-            onChange={(e) =>
-              setAmount(e.target.value)
+            onChange={
+              (e) =>
+                setAmount(
+                  e.target.value
+                )
             }
           />
 
@@ -918,8 +1312,6 @@ function AddTransaction() {
 
         <br />
 
-
-        {/* Date */}
 
         <div>
 
@@ -932,8 +1324,11 @@ function AddTransaction() {
           <input
             type="date"
             value={date}
-            onChange={(e) =>
-              setDate(e.target.value)
+            onChange={
+              (e) =>
+                setDate(
+                  e.target.value
+                )
             }
           />
 
@@ -942,8 +1337,6 @@ function AddTransaction() {
 
         <br />
 
-
-        {/* Reference Number */}
 
         <div>
 
@@ -956,9 +1349,14 @@ function AddTransaction() {
           <input
             type="text"
             placeholder="e.g. INV001"
-            value={referenceNumber}
-            onChange={(e) =>
-              setReferenceNumber(e.target.value)
+            value={
+              referenceNumber
+            }
+            onChange={
+              (e) =>
+                setReferenceNumber(
+                  e.target.value
+                )
             }
           />
 
@@ -967,8 +1365,6 @@ function AddTransaction() {
 
         <br />
 
-
-        {/* Notes */}
 
         <div>
 
@@ -981,8 +1377,11 @@ function AddTransaction() {
           <textarea
             placeholder="Enter notes"
             value={notes}
-            onChange={(e) =>
-              setNotes(e.target.value)
+            onChange={
+              (e) =>
+                setNotes(
+                  e.target.value
+                )
             }
           />
 
@@ -991,8 +1390,6 @@ function AddTransaction() {
 
         <br />
 
-
-        {/* Save */}
 
         <button
           type="submit"
@@ -1015,6 +1412,5 @@ function AddTransaction() {
   );
 
 }
-
 
 export default AddTransaction;
