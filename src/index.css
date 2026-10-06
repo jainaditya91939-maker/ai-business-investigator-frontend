@@ -29,13 +29,24 @@
   --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
 
+
+/* ==========================================
+   BASE
+   ========================================== */
+
 html,
 body,
 #root {
   min-height: 100%;
 }
 
+html {
+  width: 100%;
+}
+
 body {
+  width: 100%;
+
   font-family:
     Inter,
     -apple-system,
@@ -46,7 +57,10 @@ body {
 
   background: var(--bg);
   color: var(--text);
+
+  overflow-x: hidden;
 }
+
 
 /* ==========================================
    APP LAYOUT
@@ -55,14 +69,17 @@ body {
 .app {
   display: flex;
   min-height: 100vh;
+  width: 100%;
 }
 
+
 /* ==========================================
-   SIDEBAR
+   DESKTOP SIDEBAR
    ========================================== */
 
 .sidebar {
   width: 250px;
+  min-width: 250px;
   min-height: 100vh;
 
   background: var(--sidebar);
@@ -73,7 +90,11 @@ body {
   position: sticky;
   top: 0;
 
-  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+
+  box-shadow:
+    4px 0 20px rgba(0, 0, 0, 0.08);
 }
 
 .sidebar h2 {
@@ -85,27 +106,34 @@ body {
   letter-spacing: -0.3px;
 }
 
-.sidebar nav {
+
+/* ==========================================
+   NAVIGATION
+   ========================================== */
+
+.desktop-nav {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.sidebar button {
+.sidebar-link {
+  display: flex;
+  align-items: center;
+
+  gap: 11px;
+
   width: 100%;
-
-  background: transparent;
-  border: none;
-
-  color: #d1d5db;
-
-  text-align: left;
 
   padding: 12px 14px;
 
   border-radius: 9px;
 
-  cursor: pointer;
+  color: #9ca3af;
+
+  background: transparent;
+
+  text-decoration: none;
 
   font-size: 15px;
   font-weight: 500;
@@ -116,11 +144,99 @@ body {
     transform 0.2s ease;
 }
 
-.sidebar button:hover {
+.sidebar-link:hover {
   background: var(--sidebar-hover);
   color: white;
+
+  text-decoration: none;
+
   transform: translateX(2px);
 }
+
+.sidebar-link.active {
+  background: var(--primary);
+  color: white;
+
+  font-weight: 600;
+}
+
+.nav-icon {
+  width: 20px;
+  min-width: 20px;
+
+  text-align: center;
+
+  font-size: 17px;
+  line-height: 1;
+}
+
+
+/* ==========================================
+   USER AREA
+   ========================================== */
+
+.sidebar-user-block {
+  margin-top: auto;
+  padding-top: 20px;
+}
+
+.sidebar-user {
+  padding: 12px 14px;
+
+  margin-bottom: 10px;
+
+  border-top: 1px solid #1f2937;
+
+  color: #9ca3af;
+
+  font-size: 13px;
+}
+
+.sidebar-user-name {
+  color: white;
+
+  font-weight: 600;
+
+  margin-bottom: 4px;
+}
+
+.sidebar-user-email {
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+
+/* ==========================================
+   LOGOUT
+   ========================================== */
+
+.logout-button {
+  width: 100%;
+
+  padding: 11px 14px;
+
+  border: 1px solid #374151;
+
+  border-radius: 9px;
+
+  background: transparent;
+
+  color: #fca5a5;
+
+  cursor: pointer;
+
+  font-size: 14px;
+
+  font-weight: 600;
+}
+
+.logout-button:hover {
+  background: #1f2937;
+}
+
 
 /* ==========================================
    MAIN CONTENT
@@ -129,13 +245,14 @@ body {
 .main-content {
   flex: 1;
 
-  padding: 40px 44px;
-
   min-width: 0;
+
+  padding: 40px 44px;
 }
 
 .main-content h1 {
   font-size: 32px;
+
   line-height: 1.2;
 
   font-weight: 700;
@@ -151,15 +268,19 @@ body {
   font-size: 15px;
 }
 
+
 /* ==========================================
    PAGE
    ========================================== */
 
 .page {
   width: 100%;
+
   max-width: 1400px;
+
   margin: 0 auto;
 }
+
 
 /* ==========================================
    CARDS
@@ -168,7 +289,8 @@ body {
 .cards {
   display: grid;
 
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
 
   gap: 20px;
 
@@ -193,6 +315,7 @@ body {
 
 .card:hover {
   transform: translateY(-2px);
+
   box-shadow: var(--shadow-md);
 }
 
@@ -206,13 +329,16 @@ body {
   margin: 10px 0;
 
   font-size: 26px;
+
   font-weight: 700;
 }
 
 .card span {
   font-size: 13px;
+
   color: var(--text-light);
 }
+
 
 /* ==========================================
    SECTIONS
@@ -227,6 +353,7 @@ body {
 
   font-size: 20px;
 }
+
 
 /* ==========================================
    ALERTS
@@ -253,6 +380,7 @@ body {
 
   color: var(--text-secondary);
 }
+
 
 /* ==========================================
    AI BOX
@@ -296,16 +424,14 @@ body {
   font-size: 15px;
 
   outline: none;
-
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
 }
 
 .ai-input input:focus {
   border-color: var(--primary);
 
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  box-shadow:
+    0 0 0 3px
+    rgba(37, 99, 235, 0.12);
 }
 
 .ai-input button {
@@ -322,17 +448,16 @@ body {
   cursor: pointer;
 
   font-size: 14px;
-  font-weight: 600;
 
-  transition:
-    background 0.2s ease,
-    transform 0.2s ease;
+  font-weight: 600;
 }
 
 .ai-input button:hover {
   background: var(--primary-hover);
+
   transform: translateY(-1px);
 }
+
 
 /* ==========================================
    FORMS
@@ -340,7 +465,8 @@ body {
 
 input,
 select,
-textarea {
+textarea,
+button {
   font-family: inherit;
 }
 
@@ -354,22 +480,20 @@ input:focus,
 select:focus,
 textarea:focus {
   outline: none;
+
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
 
-/* ==========================================
-   BUTTONS
-   ========================================== */
-
-button {
-  font-family: inherit;
+  box-shadow:
+    0 0 0 3px
+    rgba(37, 99, 235, 0.1);
 }
 
 button:disabled {
   opacity: 0.6;
+
   cursor: not-allowed;
 }
+
 
 /* ==========================================
    TABLES
@@ -377,11 +501,13 @@ button:disabled {
 
 table {
   width: 100%;
+
   border-collapse: collapse;
 
   background: var(--surface);
 
   border-radius: 12px;
+
   overflow: hidden;
 
   border: 1px solid var(--border);
@@ -393,6 +519,7 @@ th {
   color: #4b5563;
 
   font-size: 13px;
+
   font-weight: 600;
 
   text-align: left;
@@ -420,8 +547,9 @@ tbody tr:hover {
   background: #f9fafb;
 }
 
+
 /* ==========================================
-   STATUS BADGES
+   STATUS
    ========================================== */
 
 .status {
@@ -453,12 +581,14 @@ tbody tr:hover {
   color: #991b1b;
 }
 
+
 /* ==========================================
    LINKS
    ========================================== */
 
 a {
   color: var(--primary);
+
   text-decoration: none;
 }
 
@@ -466,47 +596,422 @@ a:hover {
   text-decoration: underline;
 }
 
+
 /* ==========================================
-   MOBILE
+   MOBILE HEADER
+   ========================================== */
+
+.mobile-header,
+.mobile-menu-layer {
+  display: none;
+}
+
+
+/* ==========================================
+   TABLET
    ========================================== */
 
 @media (max-width: 1100px) {
+
   .main-content {
     padding: 32px 28px;
   }
 
   .cards {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
   }
+
 }
 
+
+/* ==========================================
+   MOBILE
+   ========================================== */
+
 @media (max-width: 700px) {
+
+  body {
+    overflow-x: hidden;
+  }
+
+  .app {
+    display: block;
+
+    min-height: 100vh;
+
+    width: 100%;
+  }
+
+  /* Hide desktop sidebar */
+
   .sidebar {
     display: none;
   }
 
+
+  /* ------------------------------
+     MOBILE HEADER
+     ------------------------------ */
+
+  .mobile-header {
+    position: sticky;
+
+    top: 0;
+
+    z-index: 1000;
+
+    height: 64px;
+
+    width: 100%;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    padding:
+      0 16px;
+
+    background: var(--sidebar);
+
+    color: white;
+
+    box-shadow:
+      0 2px 14px
+      rgba(0, 0, 0, 0.12);
+  }
+
+  .mobile-brand {
+    display: flex;
+
+    align-items: center;
+
+    gap: 9px;
+
+    font-size: 17px;
+
+    font-weight: 700;
+  }
+
+  .mobile-brand-icon {
+    display: grid;
+
+    place-items: center;
+
+    width: 30px;
+
+    height: 30px;
+
+    border-radius: 8px;
+
+    background: var(--primary);
+
+    color: white;
+
+    font-size: 16px;
+  }
+
+  .mobile-menu-button {
+    width: 44px;
+
+    height: 44px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 5px;
+
+    border: 1px solid #374151;
+
+    border-radius: 10px;
+
+    background: #1f2937;
+
+    cursor: pointer;
+  }
+
+  .mobile-menu-button span {
+    display: block;
+
+    width: 20px;
+
+    height: 2px;
+
+    border-radius: 2px;
+
+    background: white;
+  }
+
+
+  /* ------------------------------
+     MOBILE DRAWER
+     ------------------------------ */
+
+  .mobile-menu-layer {
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 2000;
+
+    display: block;
+  }
+
+  .mobile-menu-overlay {
+    position: absolute;
+
+    inset: 0;
+
+    width: 100%;
+
+    height: 100%;
+
+    border: none;
+
+    background:
+      rgba(15, 23, 42, 0.55);
+
+    cursor: pointer;
+  }
+
+  .mobile-drawer {
+    position: absolute;
+
+    top: 0;
+
+    right: 0;
+
+    width: min(86vw, 360px);
+
+    height: 100%;
+
+    display: flex;
+
+    flex-direction: column;
+
+    padding: 20px 16px;
+
+    overflow-y: auto;
+
+    background: var(--sidebar);
+
+    color: white;
+
+    box-shadow:
+      -8px 0 28px
+      rgba(0, 0, 0, 0.22);
+  }
+
+
+  /* ------------------------------
+     DRAWER HEADER
+     ------------------------------ */
+
+  .mobile-drawer-header {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 12px;
+
+    padding:
+      4px 4px 20px;
+
+    border-bottom:
+      1px solid #1f2937;
+
+    margin-bottom: 14px;
+  }
+
+  .mobile-drawer-title {
+    font-size: 20px;
+
+    font-weight: 700;
+  }
+
+  .mobile-drawer-subtitle {
+    margin-top: 4px;
+
+    color: #9ca3af;
+
+    font-size: 12px;
+  }
+
+  .mobile-close-button {
+    width: 42px;
+
+    height: 42px;
+
+    border: 1px solid #374151;
+
+    border-radius: 10px;
+
+    background: #1f2937;
+
+    color: white;
+
+    font-size: 27px;
+
+    line-height: 1;
+
+    cursor: pointer;
+  }
+
+
+  /* ------------------------------
+     MOBILE NAV
+     ------------------------------ */
+
+  .mobile-nav {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 7px;
+  }
+
+  .mobile-nav .sidebar-link {
+    min-height: 50px;
+
+    padding: 14px;
+
+    font-size: 15px;
+  }
+
+  .mobile-nav .nav-icon {
+    font-size: 18px;
+  }
+
+  .mobile-drawer .sidebar-user-block {
+    margin-top: auto;
+
+    padding-top: 24px;
+  }
+
+  .mobile-drawer .logout-button {
+    min-height: 48px;
+  }
+
+
+  /* ------------------------------
+     MAIN CONTENT
+     ------------------------------ */
+
   .main-content {
-    padding: 24px 18px;
+    width: 100%;
+
+    min-width: 0;
+
+    padding:
+      22px 14px 32px;
   }
 
   .main-content h1 {
-    font-size: 26px;
+    font-size: 27px;
+
+    line-height: 1.18;
   }
+
+  .subtitle {
+    font-size: 14px;
+
+    line-height: 1.5;
+  }
+
+  .page {
+    max-width: 100%;
+  }
+
+
+  /* ------------------------------
+     DASHBOARD CARDS
+     ------------------------------ */
 
   .cards {
     grid-template-columns: 1fr;
+
+    gap: 14px;
+
+    margin-top: 22px;
+  }
+
+  .card {
+    padding: 18px;
+
+    border-radius: 14px;
+  }
+
+
+  /* ------------------------------
+     SECTIONS
+     ------------------------------ */
+
+  .section {
+    margin-top: 26px;
+  }
+
+
+  /* ------------------------------
+     AI
+     ------------------------------ */
+
+  .ai-box {
+    padding: 18px;
+
+    margin-top: 24px;
   }
 
   .ai-input {
     flex-direction: column;
   }
 
+  .ai-input input,
   .ai-input button {
     width: 100%;
+
+    min-height: 46px;
   }
+
+
+  /* ------------------------------
+     TABLES
+     ------------------------------ */
 
   table {
     display: block;
+
     overflow-x: auto;
+
+    -webkit-overflow-scrolling: touch;
+
+    white-space: nowrap;
   }
+
+  th,
+  td {
+    padding:
+      12px 13px;
+  }
+
+
+  /* ------------------------------
+     TOUCH-FRIENDLY CONTROLS
+     ------------------------------ */
+
+  input,
+  select,
+  textarea,
+  button {
+    font-size: 16px;
+  }
+
 }

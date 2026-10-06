@@ -1,123 +1,172 @@
+import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+
+const navItems = [
+  { path: "/", label: "Dashboard", icon: "⌂", end: true },
+  { path: "/suppliers", label: "Suppliers", icon: "▣" },
+  { path: "/products", label: "Products", icon: "▤" },
+  { path: "/transactions", label: "Transactions", icon: "↔" },
+  { path: "/add-transaction", label: "Add Transaction", icon: "+" },
+  { path: "/ai", label: "AI Investigator", icon: "✦" },
+];
 
 function Sidebar() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-
-  const navItems = [
-    {
-      path: "/",
-      label: "Dashboard",
-    },
-    {
-      path: "/suppliers",
-      label: "Suppliers",
-    },
-    {
-      path: "/products",
-      label: "Products",
-    },
-    {
-      path: "/transactions",
-      label: "Transactions",
-    },
-    {
-      path: "/ai",
-      label: "AI Investigator",
-    },
-  ];
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = () => {
+    setMobileOpen(false);
     logout();
     navigate("/login", { replace: true });
   };
 
-  return (
-    <aside className="sidebar">
-      <h2>AI Investigator</h2>
+  const handleNavigate = () => {
+    setMobileOpen(false);
+  };
 
-      <nav>
-        {navItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            end={item.path === "/"}
-            style={({ isActive }) => ({
-              display: "block",
-              width: "100%",
-              padding: "12px 14px",
-              borderRadius: "9px",
-              color: isActive ? "#ffffff" : "#9ca3af",
-              background: isActive ? "#2563eb" : "transparent",
-              textDecoration: "none",
-              fontSize: "15px",
-              fontWeight: isActive ? "600" : "500",
-              transition: "background 0.2s ease, color 0.2s ease",
-            })}
-          >
-            {item.label}
-          </NavLink>
-        ))}
-      </nav>
+  const renderNav = (mobile = false) => (
+    <nav className={mobile ? "mobile-nav" : "desktop-nav"}>
+      {navItems.map((item) => (
+        <NavLink
+          key={item.path}
+          to={item.path}
+          end={item.end}
+          onClick={handleNavigate}
+          className={({ isActive }) =>
+            `sidebar-link ${isActive ? "active" : ""}`
+          }
+        >
+          <span className="nav-icon" aria-hidden="true">
+            {item.icon}
+          </span>
 
-      <div
-        style={{
-          marginTop: "auto",
-          paddingTop: "20px",
-        }}
-      >
-        {user && (
-          <div
-            style={{
-              padding: "12px 14px",
-              marginBottom: "10px",
-              borderTop: "1px solid #1f2937",
-              color: "#9ca3af",
-              fontSize: "13px",
-            }}
-          >
-            <div
-              style={{
-                color: "#ffffff",
-                fontWeight: "600",
-                marginBottom: "4px",
-              }}
-            >
-              {user.name}
-            </div>
+          <span>{item.label}</span>
+        </NavLink>
+      ))}
+    </nav>
+  );
 
-            <div
-              style={{
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {user.email}
-            </div>
+  const userBlock = (
+    <div className="sidebar-user-block">
+      {user && (
+        <div className="sidebar-user">
+          <div className="sidebar-user-name">
+            {user.name}
           </div>
-        )}
+
+          <div className="sidebar-user-email">
+            {user.email}
+          </div>
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={handleLogout}
+        className="logout-button"
+      >
+        Logout
+      </button>
+    </div>
+  );
+
+  return (
+    <>
+      {/* ================================
+          DESKTOP SIDEBAR
+          ================================ */}
+
+      <aside className="sidebar">
+        <h2>AI Investigator</h2>
+
+        {renderNav()}
+
+        {userBlock}
+      </aside>
+
+
+      {/* ================================
+          MOBILE HEADER
+          ================================ */}
+
+      <header className="mobile-header">
+        <div className="mobile-brand">
+          <span className="mobile-brand-icon">
+            ✦
+          </span>
+
+          <span>
+            AI Investigator
+          </span>
+        </div>
 
         <button
           type="button"
-          onClick={handleLogout}
-          style={{
-            width: "100%",
-            padding: "11px 14px",
-            border: "1px solid #374151",
-            borderRadius: "9px",
-            background: "transparent",
-            color: "#fca5a5",
-            cursor: "pointer",
-            fontSize: "14px",
-            fontWeight: "600",
-          }}
+          className="mobile-menu-button"
+          onClick={() => setMobileOpen(true)}
+          aria-label="Open navigation menu"
+          aria-expanded={mobileOpen}
         >
-          Logout
+          <span />
+          <span />
+          <span />
         </button>
-      </div>
-    </aside>
+      </header>
+
+
+      {/* ================================
+          MOBILE NAVIGATION DRAWER
+          ================================ */}
+
+      {mobileOpen && (
+        <div className="mobile-menu-layer">
+
+          <button
+            type="button"
+            className="mobile-menu-overlay"
+            onClick={() => setMobileOpen(false)}
+            aria-label="Close navigation menu"
+          />
+
+          <aside
+            className="mobile-drawer"
+            aria-label="Mobile navigation"
+          >
+
+            <div className="mobile-drawer-header">
+
+              <div>
+                <div className="mobile-drawer-title">
+                  AI Investigator
+                </div>
+
+                <div className="mobile-drawer-subtitle">
+                  Business workspace
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="mobile-close-button"
+                onClick={() => setMobileOpen(false)}
+                aria-label="Close navigation menu"
+              >
+                ×
+              </button>
+
+            </div>
+
+            {renderNav(true)}
+
+            {userBlock}
+
+          </aside>
+
+        </div>
+      )}
+    </>
   );
 }
 
