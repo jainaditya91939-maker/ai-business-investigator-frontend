@@ -297,7 +297,9 @@ function AddTransaction() {
         );
 
       if (!addConfirmed) {
+
         return;
+
       }
 
       try {
@@ -365,7 +367,9 @@ function AddTransaction() {
               createData.supplier;
 
             if (!created) {
+
               return current;
+
             }
 
             return [
@@ -493,7 +497,8 @@ function AddTransaction() {
       recognition.lang =
         "en-IN";
 
-      // Try multiple speech recognition alternatives
+      // IMPORTANT:
+      // Ask browser for multiple alternatives.
       recognition.maxAlternatives =
         3;
 
@@ -510,47 +515,22 @@ function AddTransaction() {
 
         };
 
+
+      // ==========================================
+      // VOICE RESULT
+      // ==========================================
+
       recognition.onresult =
         async (event) => {
 
-          const spokenText =
-            event.results[0][0]
-              .transcript;
-
-          setVoiceText(
-            spokenText
-          );
-
           setListening(false);
 
-          try {
+          // Browser speech recognition can return
+          // multiple alternatives.
+          const result =
+            event.results?.[0];
 
-            const data =
-              await sendVoiceText(
-                spokenText
-              );
-
-            setVoiceResult(
-              data
-            );
-
-            if (
-              data.status ===
-              "SUCCESS"
-            ) {
-
-              alert(
-                "Voice transaction saved successfully!"
-              );
-
-              window.location.href =
-                "/transactions";
-
-            }
-
-          } catch (error) {
-
-            console.error(error);
+          if (!result) {
 
             setVoiceResult({
 
@@ -558,14 +538,233 @@ function AddTransaction() {
                 "ERROR",
 
               message:
-                error.message ||
-                "Voice transaction failed",
+                "No speech was detected. Please try again.",
 
             });
+
+            return;
+
+          }
+
+          // --------------------------------------
+          // COLLECT ALL ASR ALTERNATIVES
+          // --------------------------------------
+
+          const alternatives = [];
+
+          for (
+            let index = 0;
+            index < result.length;
+            index += 1
+          ) {
+
+            const transcript =
+              result[index]?.transcript?.trim();
+
+            if (
+              transcript &&
+              !alternatives.includes(
+                transcript
+              )
+            ) {
+
+              alternatives.push(
+                transcript
+              );
+
+            }
+
+          }
+
+          if (!alternatives.length) {
+
+            setVoiceResult({
+
+              status:
+                "ERROR",
+
+              message:
+                "Could not understand the speech. Please speak clearly and try again.",
+
+            });
+
+            return;
+
+          }
+
+          // Show first browser transcription
+          // immediately.
+          setVoiceText(
+            alternatives[0]
+          );
+
+
+          // --------------------------------------
+          // RESULT PRIORITY
+          // --------------------------------------
+
+          const priority = {
+
+            SUCCESS:
+              5,
+
+            SUPPLIER_NOT_FOUND:
+              4,
+
+            NEEDS_INFORMATION:
+              3,
+
+            DUPLICATE_TRANSACTION:
+              2,
+
+            ERROR:
+              1,
+
+          };
+
+
+          let bestResult =
+            null;
+
+          let bestText =
+            alternatives[0];
+
+
+          // --------------------------------------
+          // TRY ALL ASR ALTERNATIVES
+          // --------------------------------------
+
+          for (
+            const candidateText
+            of alternatives
+          ) {
+
+            try {
+
+              console.log(
+                "Trying voice alternative:",
+                candidateText
+              );
+
+              const data =
+                await sendVoiceText(
+                  candidateText
+                );
+
+              const currentScore =
+                priority[
+                  data?.status
+                ] || 0;
+
+              const bestScore =
+                priority[
+                  bestResult?.status
+                ] || 0;
+
+
+              if (
+                bestResult === null ||
+                currentScore > bestScore
+              ) {
+
+                bestResult =
+                  data;
+
+                bestText =
+                  candidateText;
+
+              }
+
+
+              // SUCCESS is the strongest
+              // possible result.
+              if (
+                data?.status ===
+                "SUCCESS"
+              ) {
+
+                break;
+
+              }
+
+            } catch (error) {
+
+              console.error(
+                "Voice alternative failed:",
+                candidateText,
+                error
+              );
+
+              // Do NOT immediately show an error.
+              // Try the next ASR alternative.
+
+            }
+
+          }
+
+
+          // --------------------------------------
+          // NO ALTERNATIVE WORKED
+          // --------------------------------------
+
+          if (!bestResult) {
+
+            setVoiceResult({
+
+              status:
+                "ERROR",
+
+              message:
+                "I could not process the voice command. Please try again with supplier name, amount and transaction type.",
+
+            });
+
+            return;
+
+          }
+
+
+          // --------------------------------------
+          // KEEP SELECTED TRANSCRIPT
+          // --------------------------------------
+
+          // This is important because if supplier
+          // is unknown, the same transcript will be
+          // sent again after supplier creation.
+
+          setVoiceText(
+            bestText
+          );
+
+          setVoiceResult(
+            bestResult
+          );
+
+
+          // --------------------------------------
+          // SUCCESS
+          // --------------------------------------
+
+          if (
+            bestResult.status ===
+            "SUCCESS"
+          ) {
+
+            alert(
+              "Voice transaction saved successfully!"
+            );
+
+            window.location.href =
+              "/transactions";
 
           }
 
         };
+
+
+      // ==========================================
+      // SPEECH ERROR
+      // ==========================================
 
       recognition.onerror =
         (event) => {
@@ -583,11 +782,22 @@ function AddTransaction() {
               "ERROR",
 
             message:
-              "Could not understand the speech.",
+              event.error ===
+              "not-allowed"
+
+                ? "Microphone permission was denied. Please allow microphone access and try again."
+
+                : event.error ===
+                  "no-speech"
+
+                ? "No speech was detected. Please speak clearly and try again."
+
+                : "Could not understand the speech. Please try again.",
 
           });
 
         };
+
 
       recognition.onend =
         () => {
@@ -596,7 +806,31 @@ function AddTransaction() {
 
         };
 
-      recognition.start();
+
+      try {
+
+        recognition.start();
+
+      } catch (error) {
+
+        console.error(
+          "Unable to start speech recognition:",
+          error
+        );
+
+        setListening(false);
+
+        setVoiceResult({
+
+          status:
+            "ERROR",
+
+          message:
+            "Unable to start microphone. Please try again.",
+
+        });
+
+      }
 
     };
 
