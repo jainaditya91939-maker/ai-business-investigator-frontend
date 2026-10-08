@@ -35,6 +35,9 @@ function AddTransaction() {
   const [voiceResult, setVoiceResult] =
     useState(null);
 
+  const [voiceProcessing, setVoiceProcessing] =
+    useState(false);
+
   const [addingVoiceSupplier, setAddingVoiceSupplier] =
     useState(false);
 
@@ -235,11 +238,19 @@ function AddTransaction() {
 
 
   // ==========================================
-  // SEND VOICE TEXT
+  // SEND VOICE TEXT TO AI
   // ==========================================
 
   const sendVoiceText =
     async (spokenText) => {
+
+      if (!spokenText?.trim()) {
+
+        throw new Error(
+          "Please enter a voice sentence first."
+        );
+
+      }
 
       const response =
         await aiFetch(
@@ -248,7 +259,7 @@ function AddTransaction() {
             method: "POST",
 
             body: JSON.stringify({
-              text: spokenText,
+              text: spokenText.trim(),
             }),
 
           }
@@ -272,6 +283,79 @@ function AddTransaction() {
 
 
   // ==========================================
+  // PROCESS EDITED VOICE TEXT
+  // ==========================================
+
+  const handleProcessVoice =
+    async () => {
+
+      const cleanedText =
+        voiceText.trim();
+
+      if (!cleanedText) {
+
+        alert(
+          "Please enter or edit the sentence first."
+        );
+
+        return;
+
+      }
+
+      try {
+
+        setVoiceProcessing(true);
+
+        setVoiceResult(null);
+
+        const data =
+          await sendVoiceText(
+            cleanedText
+          );
+
+        setVoiceResult(data);
+
+        if (
+          data.status ===
+          "SUCCESS"
+        ) {
+
+          alert(
+            "Voice transaction saved successfully!"
+          );
+
+          window.location.href =
+            "/transactions";
+
+        }
+
+      } catch (error) {
+
+        console.error(error);
+
+        setVoiceResult({
+
+          status:
+            "ERROR",
+
+          message:
+            error.message ||
+            "Voice transaction failed",
+
+        });
+
+      } finally {
+
+        setVoiceProcessing(
+          false
+        );
+
+      }
+
+    };
+
+
+  // ==========================================
   // ADD UNKNOWN VOICE SUPPLIER
   // ==========================================
 
@@ -280,7 +364,7 @@ function AddTransaction() {
 
       if (
         !voiceResult?.supplier_name ||
-        !voiceText
+        !voiceText.trim()
       ) {
 
         return;
@@ -297,9 +381,7 @@ function AddTransaction() {
         );
 
       if (!addConfirmed) {
-
         return;
-
       }
 
       try {
@@ -367,9 +449,7 @@ function AddTransaction() {
               createData.supplier;
 
             if (!created) {
-
               return current;
-
             }
 
             return [
@@ -410,12 +490,12 @@ function AddTransaction() {
         }
 
         // ------------------------------------
-        // RETRY ORIGINAL VOICE TRANSACTION
+        // RETRY ORIGINAL EDITED VOICE TEXT
         // ------------------------------------
 
         const retryData =
           await sendVoiceText(
-            voiceText
+            voiceText.trim()
           );
 
         setVoiceResult(
@@ -493,12 +573,9 @@ function AddTransaction() {
       const recognition =
         new SpeechRecognition();
 
-      // English / Roman-Hinglish speech
       recognition.lang =
         "en-IN";
 
-      // IMPORTANT:
-      // Ask browser for multiple alternatives.
       recognition.maxAlternatives =
         3;
 
@@ -515,256 +592,23 @@ function AddTransaction() {
 
         };
 
-
-      // ==========================================
-      // VOICE RESULT
-      // ==========================================
-
       recognition.onresult =
-        async (event) => {
+        (event) => {
+
+          const spokenText =
+            event.results[0][0]
+              .transcript
+              .trim();
+
+          setVoiceText(
+            spokenText
+          );
+
+          setVoiceResult(null);
 
           setListening(false);
 
-          // Browser speech recognition can return
-          // multiple alternatives.
-          const result =
-            event.results?.[0];
-
-          if (!result) {
-
-            setVoiceResult({
-
-              status:
-                "ERROR",
-
-              message:
-                "No speech was detected. Please try again.",
-
-            });
-
-            return;
-
-          }
-
-          // --------------------------------------
-          // COLLECT ALL ASR ALTERNATIVES
-          // --------------------------------------
-
-          const alternatives = [];
-
-          for (
-            let index = 0;
-            index < result.length;
-            index += 1
-          ) {
-
-            const transcript =
-              result[index]?.transcript?.trim();
-
-            if (
-              transcript &&
-              !alternatives.includes(
-                transcript
-              )
-            ) {
-
-              alternatives.push(
-                transcript
-              );
-
-            }
-
-          }
-
-          if (!alternatives.length) {
-
-            setVoiceResult({
-
-              status:
-                "ERROR",
-
-              message:
-                "Could not understand the speech. Please speak clearly and try again.",
-
-            });
-
-            return;
-
-          }
-
-          // Show first browser transcription
-          // immediately.
-          setVoiceText(
-            alternatives[0]
-          );
-
-
-          // --------------------------------------
-          // RESULT PRIORITY
-          // --------------------------------------
-
-          const priority = {
-
-            SUCCESS:
-              5,
-
-            SUPPLIER_NOT_FOUND:
-              4,
-
-            NEEDS_INFORMATION:
-              3,
-
-            DUPLICATE_TRANSACTION:
-              2,
-
-            ERROR:
-              1,
-
-          };
-
-
-          let bestResult =
-            null;
-
-          let bestText =
-            alternatives[0];
-
-
-          // --------------------------------------
-          // TRY ALL ASR ALTERNATIVES
-          // --------------------------------------
-
-          for (
-            const candidateText
-            of alternatives
-          ) {
-
-            try {
-
-              console.log(
-                "Trying voice alternative:",
-                candidateText
-              );
-
-              const data =
-                await sendVoiceText(
-                  candidateText
-                );
-
-              const currentScore =
-                priority[
-                  data?.status
-                ] || 0;
-
-              const bestScore =
-                priority[
-                  bestResult?.status
-                ] || 0;
-
-
-              if (
-                bestResult === null ||
-                currentScore > bestScore
-              ) {
-
-                bestResult =
-                  data;
-
-                bestText =
-                  candidateText;
-
-              }
-
-
-              // SUCCESS is the strongest
-              // possible result.
-              if (
-                data?.status ===
-                "SUCCESS"
-              ) {
-
-                break;
-
-              }
-
-            } catch (error) {
-
-              console.error(
-                "Voice alternative failed:",
-                candidateText,
-                error
-              );
-
-              // Do NOT immediately show an error.
-              // Try the next ASR alternative.
-
-            }
-
-          }
-
-
-          // --------------------------------------
-          // NO ALTERNATIVE WORKED
-          // --------------------------------------
-
-          if (!bestResult) {
-
-            setVoiceResult({
-
-              status:
-                "ERROR",
-
-              message:
-                "I could not process the voice command. Please try again with supplier name, amount and transaction type.",
-
-            });
-
-            return;
-
-          }
-
-
-          // --------------------------------------
-          // KEEP SELECTED TRANSCRIPT
-          // --------------------------------------
-
-          // This is important because if supplier
-          // is unknown, the same transcript will be
-          // sent again after supplier creation.
-
-          setVoiceText(
-            bestText
-          );
-
-          setVoiceResult(
-            bestResult
-          );
-
-
-          // --------------------------------------
-          // SUCCESS
-          // --------------------------------------
-
-          if (
-            bestResult.status ===
-            "SUCCESS"
-          ) {
-
-            alert(
-              "Voice transaction saved successfully!"
-            );
-
-            window.location.href =
-              "/transactions";
-
-          }
-
         };
-
-
-      // ==========================================
-      // SPEECH ERROR
-      // ==========================================
 
       recognition.onerror =
         (event) => {
@@ -782,22 +626,11 @@ function AddTransaction() {
               "ERROR",
 
             message:
-              event.error ===
-              "not-allowed"
-
-                ? "Microphone permission was denied. Please allow microphone access and try again."
-
-                : event.error ===
-                  "no-speech"
-
-                ? "No speech was detected. Please speak clearly and try again."
-
-                : "Could not understand the speech. Please try again.",
+              "Could not understand the speech. Please try again.",
 
           });
 
         };
-
 
       recognition.onend =
         () => {
@@ -806,17 +639,13 @@ function AddTransaction() {
 
         };
 
-
       try {
 
         recognition.start();
 
       } catch (error) {
 
-        console.error(
-          "Unable to start speech recognition:",
-          error
-        );
+        console.error(error);
 
         setListening(false);
 
@@ -1025,6 +854,7 @@ function AddTransaction() {
           }
           disabled={
             listening ||
+            voiceProcessing ||
             addingVoiceSupplier
           }
         >
@@ -1036,24 +866,107 @@ function AddTransaction() {
         </button>
 
 
+        {/* =================================
+            EDITABLE VOICE TEXT
+        ================================= */}
+
         {voiceText && (
 
           <div
             style={{
               marginTop: "20px",
-              padding: "15px",
+              padding: "18px",
               background: "#f5f5f5",
-              borderRadius: "10px",
+              borderRadius: "12px",
+              border: "1px solid #ddd",
             }}
           >
 
             <strong>
-              You said:
+              📝 Check / edit your sentence
             </strong>
 
-            <p>
-              {voiceText}
+            <p
+              style={{
+                marginTop: "8px",
+                marginBottom: "10px",
+                color: "#666",
+              }}
+            >
+              If speech recognition heard
+              something incorrectly, edit
+              the sentence below before
+              processing.
             </p>
+
+            <textarea
+              value={voiceText}
+              onChange={(e) => {
+                setVoiceText(
+                  e.target.value
+                );
+
+                if (voiceResult) {
+                  setVoiceResult(null);
+                }
+              }}
+              rows={3}
+              placeholder="Example: Polycab se 500 rupaye ka purchase kiya"
+              disabled={
+                voiceProcessing ||
+                addingVoiceSupplier
+              }
+              style={{
+                width: "100%",
+                padding: "12px",
+                borderRadius: "8px",
+                border: "1px solid #ccc",
+                fontSize: "16px",
+                resize: "vertical",
+                boxSizing: "border-box",
+              }}
+            />
+
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+                flexWrap: "wrap",
+                marginTop: "12px",
+              }}
+            >
+
+              <button
+                type="button"
+                onClick={
+                  handleVoiceTransaction
+                }
+                disabled={
+                  listening ||
+                  voiceProcessing ||
+                  addingVoiceSupplier
+                }
+              >
+                🔄 Re-record
+              </button>
+
+              <button
+                type="button"
+                onClick={
+                  handleProcessVoice
+                }
+                disabled={
+                  voiceProcessing ||
+                  addingVoiceSupplier ||
+                  !voiceText.trim()
+                }
+              >
+                {voiceProcessing
+                  ? "🤖 Processing..."
+                  : "🤖 Process & Save"}
+              </button>
+
+            </div>
 
           </div>
 
